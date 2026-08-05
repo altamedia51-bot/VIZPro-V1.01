@@ -329,7 +329,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
             </div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-white text-[13px] tracking-wide">VIZ PRO</span>
-              <span className="bg-[#222] text-[#6b9cf2] text-[9px] font-bold px-1.5 py-0.5 rounded">V1.0</span>
+              <span className="bg-[#222] text-[#6b9cf2] text-[9px] font-bold px-1.5 py-0.5 rounded">V1.01</span>
             </div>
           </button>
           
