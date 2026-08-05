@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aspect Ratio</title>
+<style>
+  .container-wide {
+    width: 800px;
+    height: 200px;
+    background: #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .container-tall {
+    width: 200px;
+    height: 800px;
+    background: #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .box {
+    aspect-ratio: 16 / 9;
+    background: red;
+    max-width: 100%;
+    max-height: 100%;
+  }
+</style>
+</head>
+<body>
+  <div class="container-wide">
+    <div class="box"></div>
+  </div>
+  <div class="container-tall">
+    <div class="box"></div>
+  </div>
+</body>
+</html>
