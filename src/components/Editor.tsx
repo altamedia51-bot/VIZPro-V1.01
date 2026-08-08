@@ -6,7 +6,7 @@ import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { Timeline } from './Timeline';
 import { useAudioAnalyzer } from '../hooks/useAudioAnalyzer';
 import { Recorder } from '../utils/recordStream';
-import { Play, Pause, SkipBack, Square, Plus, Image as ImageIcon, Settings, Download, Trash2, Home, Music, Radio, Type, Sparkles, Layers, Search, Volume2, VolumeX, ChevronDown, FolderOpen, Undo2, Redo2, FileCode, Maximize2, Settings as SettingsIcon, CheckCircle2, Cpu, Settings, Database } from 'lucide-react';
+import { Play, Pause, SkipBack, Square, Plus, Image as ImageIcon, Download, Trash2, Home, Music, Radio, Type, Sparkles, Layers, Search, Volume2, VolumeX, ChevronDown, FolderOpen, Undo2, Redo2, FileCode, Maximize2, Settings as SettingsIcon, CheckCircle2, Cpu, Settings, Database } from 'lucide-react';
 import { parseSRT } from '../utils/srtParser';
 import { db } from '../lib/db';
 
@@ -26,6 +26,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [multiSelectIds, setMultiSelectIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('visualizer');
   const [openBgAccordion, setOpenBgAccordion] = useState<string>('type');
   const [searchQuery, setSearchQuery] = useState('');
@@ -239,10 +240,34 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
   };
 
   const updateElement = (id: string, updates: Partial<VizElement>) => {
-    setProject(prev => ({
-      ...prev,
-      elements: prev.elements.map(el => el.id === id ? { ...el, ...updates } : el)
-    }));
+    setProject(prev => {
+      const element = prev.elements.find(el => el.id === id);
+      if (element && element.groupId && (updates.x !== undefined || updates.y !== undefined)) {
+        const dx = (updates.x ?? element.x) - element.x;
+        const dy = (updates.y ?? element.y) - element.y;
+        
+        return {
+          ...prev,
+          elements: prev.elements.map(el => {
+            if (el.id === id) {
+              return { ...el, ...updates } as any;
+            }
+            if (el.groupId === element.groupId) {
+              return {
+                ...el,
+                x: el.x + dx,
+                y: el.y + dy,
+              } as any;
+            }
+            return el;
+          })
+        };
+      }
+      return {
+        ...prev,
+        elements: prev.elements.map(el => el.id === id ? { ...el, ...updates } as any : el)
+      };
+    });
   };
 
   const removeElement = (id: string) => {
@@ -903,6 +928,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                         const isAutoText = (document.getElementById('auto-text-checkbox') as HTMLInputElement)?.checked ?? true;
                         
                         const imageId = crypto.randomUUID();
+                        const groupId = isAutoText ? crypto.randomUUID() : undefined;
                         const newElImage: any = {
                           id: imageId,
                           type: 'image',
@@ -913,7 +939,8 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                           rotation: 0,
                           opacity: 1,
                           width: 48,
-                          height: 48
+                          height: 48,
+                          groupId
                         };
 
                         const newElements = [newElImage];
@@ -932,6 +959,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                             opacity: 1,
                             fontSize: 48,
                             fontFamily: 'Inter',
+                            groupId
                           };
                           newElements.push(newElText);
                         }
@@ -948,7 +976,40 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                   ))}
                 </div>
 
-                <h2 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold mb-4">Layers</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Layers</h2>
+                  {multiSelectIds.length > 1 && (
+                    <button 
+                      onClick={() => {
+                        const newGroupId = crypto.randomUUID();
+                        setProject(p => ({
+                          ...p,
+                          elements: p.elements.map(e => multiSelectIds.includes(e.id) ? { ...e, groupId: newGroupId } : e)
+                        }));
+                        setMultiSelectIds([]);
+                      }}
+                      className="text-[9px] bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded font-bold"
+                    >
+                      Group Selected
+                    </button>
+                  )}
+                  {multiSelectIds.length === 1 && project.elements.find(e => e.id === multiSelectIds[0])?.groupId && (
+                     <button 
+                       onClick={() => {
+                         const groupToClear = project.elements.find(e => e.id === multiSelectIds[0])?.groupId;
+                         setProject(p => ({
+                           ...p,
+                           elements: p.elements.map(e => e.groupId === groupToClear ? { ...e, groupId: undefined } : e)
+                         }));
+                         setMultiSelectIds([]);
+                       }}
+                       className="text-[9px] bg-rose-600 hover:bg-rose-500 text-white px-2 py-1 rounded font-bold"
+                     >
+                       Ungroup
+                     </button>
+                  )}
+                </div>
+
                 {project.elements.length === 0 ? (
                   <p className="text-xs text-gray-500 italic">No elements added.</p>
                 ) : (
@@ -963,7 +1024,26 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                             : 'bg-white/5 border-white/5 hover:border-white/20'
                         }`}
                       >
-                        <span className="font-medium text-xs text-white capitalize">{el.type.replace('_', ' ')}</span>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="checkbox"
+                            checked={multiSelectIds.includes(el.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              if (e.target.checked) setMultiSelectIds(p => [...p, el.id]);
+                              else setMultiSelectIds(p => p.filter(id => id !== el.id));
+                            }}
+                            className="w-3 h-3 rounded bg-[#1A1A1A] border-white/10 text-blue-500"
+                          />
+                          <span className="font-medium text-xs text-white capitalize">
+                            {el.type.replace('_', ' ')}
+                          </span>
+                          {el.groupId && (
+                            <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded ml-2">
+                              Grouped
+                            </span>
+                          )}
+                        </div>
                         <button 
                           onClick={(e) => { e.stopPropagation(); removeElement(el.id); }} 
                           className="text-gray-400 hover:text-rose-400 p-1"
@@ -1026,8 +1106,8 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                     { type: 'spiral_galaxy', name: 'Spiral Galaxy', category: 'particles', label: 'PARTICLES' },
                     { type: 'multi_sine', name: 'Multi Sine Waves', category: 'waves', label: 'WAVES' },
                     { type: 'single_sine', name: 'Single Sine Wave', category: 'waves', label: 'WAVES' },
-                    { type: 'hanging_text', name: 'Hanging Text', category: 'waves', label: 'TEXT' },
-                    { type: 'line_glow', name: 'Straight Line', category: 'waves', label: 'WAVES' },
+                    { type: 'hanging_text' as any, name: 'Hanging Text', category: 'waves', label: 'TEXT' },
+                    { type: 'line_glow' as any, name: 'Straight Line', category: 'waves', label: 'WAVES' },
                     { type: 'flames', name: 'Flames Column', category: 'elements', label: 'ELEMENTS' },
                     { type: 'rain', name: 'Rain Ripples', category: 'elements', label: 'ELEMENTS' },
                     { type: 'color_pixel', name: 'Color Pixel', category: 'elements', label: 'ELEMENTS' },
@@ -1097,9 +1177,25 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
             if (!el) return null;
             return (
               <div className="p-6 space-y-8">
-                <div>
-                  <h2 className="text-sm font-semibold text-white capitalize mb-1">{el.type} Element</h2>
-                  <span className="inline-block px-2 py-1 bg-indigo-500/20 text-indigo-400 text-[10px] font-bold rounded uppercase tracking-wider">VISUALIZER</span>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-sm font-semibold text-white capitalize mb-1">{el.type} Element</h2>
+                    <span className="inline-block px-2 py-1 bg-indigo-500/20 text-indigo-400 text-[10px] font-bold rounded uppercase tracking-wider">VISUALIZER</span>
+                  </div>
+                  {el.groupId && (
+                    <button 
+                      onClick={() => {
+                        const groupId = el.groupId;
+                        setProject(p => ({
+                          ...p,
+                          elements: p.elements.map(e => e.groupId === groupId ? { ...e, groupId: undefined } : e)
+                        }));
+                      }}
+                      className="text-[9px] bg-rose-600 hover:bg-rose-500 text-white px-2 py-1 rounded font-bold"
+                    >
+                      UNGROUP
+                    </button>
+                  )}
                 </div>
 
                 {/* Transform */}
