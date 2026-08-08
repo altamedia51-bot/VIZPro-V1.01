@@ -1236,7 +1236,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                     { type: 'spiral_galaxy', name: 'Spiral Galaxy', category: 'particles', label: 'PARTICLES' },
                     { type: 'multi_sine', name: 'Multi Sine Waves', category: 'waves', label: 'WAVES' },
                     { type: 'single_sine', name: 'Single Sine Wave', category: 'waves', label: 'WAVES' },
-                    { type: 'hanging_text' as any, name: 'Hanging Text', category: 'waves', label: 'TEXT' },
+                    { type: 'hanging_text' as any, name: 'Hanging Text', category: 'elements', label: 'TEXT' },
                     { type: 'line_glow' as any, name: 'Straight Line', category: 'waves', label: 'WAVES' },
                     { type: 'flames', name: 'Flames Column', category: 'elements', label: 'ELEMENTS' },
                     { type: 'rain', name: 'Rain Ripples', category: 'elements', label: 'ELEMENTS' },
@@ -1442,11 +1442,11 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                           <button onClick={() => updateElement(el.id, { templateStyle: 'tiktok_karaoke', color: '#00ff00' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
                             <span className="text-white font-bold text-xs" style={{textShadow: '2px 2px 0px #000000'}}>KARAOKE</span>
                           </button>
-                          <button onClick={() => updateElement(el.id, { isHanging: !(el as any).isHanging })} className={`p-3 bg-[#1A1A1A] border ${(el as any).isHanging ? 'border-blue-500' : 'border-white/5 hover:border-blue-500'} rounded flex items-center justify-center min-h-[60px]`}>
-                            <span className="text-white font-bold text-xs">HANGING</span>
-                          </button>
                           <button onClick={() => updateElement(el.id, { templateStyle: 'tiktok_shadow', color: '#ffffff' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
                             <span className="text-white font-bold text-[10px]" style={{textShadow: '-2px 0px 0px #00ffff, 2px 0px 0px #ff0050'}}>TIKTOK</span>
+                          </button>
+                          <button onClick={() => updateElement(el.id, { isHanging: !(el as any).isHanging })} className={`p-3 bg-[#1A1A1A] border ${(el as any).isHanging ? 'border-blue-500' : 'border-white/5 hover:border-blue-500'} rounded flex items-center justify-center min-h-[60px]`}>
+                            <span className="text-white font-bold text-xs">HANGING</span>
                           </button>
                           <button onClick={() => updateElement(el.id, { templateStyle: 'highlight_pop', color: '#FFFF00' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px] col-span-2">
                             <span className="text-[#FFFF00] font-black text-sm italic" style={{textShadow: '2px 2px 0px #000000', WebkitTextStroke: '0.5px black'}}>HIGHLIGHT POP</span>
