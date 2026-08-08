@@ -524,7 +524,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
               let swayAngle = 0;
               let swayDepth = 0;
               let swayLift = 0;
-              if (el.templateStyle === 'hanging') {
+              if ((el as any).isHanging) {
                  // sway like a pendulum
                  swayAngle = Math.sin(time * 0.002) * 0.06; // Left/right swing
                  
@@ -560,13 +560,14 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
               const paddingY = 10;
               
               // Draw hanging string if templateStyle is hanging
-              if (el.templateStyle === 'hanging') {
+              if ((el as any).isHanging) {
                  ctx.save();
                  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
                  ctx.lineWidth = 1.5;
                  ctx.beginPath();
                  
                  const ringOuter = 8;
+                 const ringInner = 3;
                  const topOfText = startY - el.fontSize * 0.38;
                  const ringY = topOfText - ringOuter * 0.6;
                  
@@ -575,6 +576,45 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                  ctx.moveTo(0, -(finalY - swayLift) - 2000);
                  ctx.lineTo(0, ringY - ringOuter);
                  ctx.stroke();
+                 
+                 // Draw ring extrusion
+                 const textColor = el.color || '#FFFFFF';
+                 let r = 200, g = 200, b = 200;
+                 if (textColor.startsWith('#') && textColor.length === 7) {
+                   r = parseInt(textColor.slice(1,3), 16);
+                   g = parseInt(textColor.slice(3,5), 16);
+                   b = parseInt(textColor.slice(5,7), 16);
+                 }
+                 const extrudeColor = `rgb(${Math.floor(r*0.6)}, ${Math.floor(g*0.6)}, ${Math.floor(b*0.6)})`;
+                 
+                 const extrudeDepth = Math.max(4, Math.floor(el.fontSize * 0.12));
+                 ctx.fillStyle = extrudeColor;
+                 for(let j = extrudeDepth; j >= 1; j--) {
+                     if (j === extrudeDepth) {
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                        ctx.shadowBlur = 12;
+                        ctx.shadowOffsetX = 4;
+                        ctx.shadowOffsetY = 8;
+                     } else {
+                        ctx.shadowBlur = 0;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 0;
+                     }
+                     ctx.beginPath();
+                     ctx.arc(0, ringY + j, ringOuter, 0, Math.PI * 2, false);
+                     ctx.arc(0, ringY + j, ringInner, 0, Math.PI * 2, true);
+                     ctx.fill();
+                 }
+                 
+                 // Draw ring front
+                 ctx.shadowBlur = 0;
+                 ctx.shadowOffsetX = 0;
+                 ctx.shadowOffsetY = 0;
+                 ctx.fillStyle = el.useGradient ? getStyle(el, -ringOuter, ringY, ringOuter, ringY) : textColor;
+                 ctx.beginPath();
+                 ctx.arc(0, ringY, ringOuter, 0, Math.PI * 2, false);
+                 ctx.arc(0, ringY, ringInner, 0, Math.PI * 2, true);
+                 ctx.fill();
                  
                  ctx.restore();
               }
@@ -623,6 +663,27 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   ctx.fillStyle = '#FFFFFF';
                   ctx.fillText(line, 0, lineY);
                   ctx.fillText(line, 0, lineY); // double fill for stronger neon
+                } else if (el.templateStyle === 'layered_outline') {
+                  const strokeWidth = el.fontSize * 0.12;
+                  const offset = el.fontSize * 0.08;
+                  const color = el.color || '#E87D2A';
+                  
+                  ctx.lineJoin = 'round';
+                  ctx.miterLimit = 2;
+                  
+                  // Bottom Layer (Shadow with Stroke)
+                  ctx.lineWidth = strokeWidth;
+                  ctx.strokeStyle = '#000000';
+                  ctx.strokeText(line, offset, lineY + offset);
+                  ctx.fillStyle = color;
+                  ctx.fillText(line, offset, lineY + offset);
+                  
+                  // Top Layer (White with Stroke)
+                  ctx.lineWidth = strokeWidth;
+                  ctx.strokeStyle = '#000000';
+                  ctx.strokeText(line, 0, lineY);
+                  ctx.fillStyle = '#FFFFFF';
+                  ctx.fillText(line, 0, lineY);
                 } else if (el.templateStyle === 'glow_border') {
                   ctx.strokeStyle = el.color || '#FF00FF';
                   ctx.lineWidth = 2;
@@ -653,30 +714,19 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   ctx.fillText(line, 0, lineY);
                   ctx.shadowOffsetX = 0;
                   ctx.shadowOffsetY = 0;
-                } else if (el.templateStyle === 'hanging') {
+                } else if ((el as any).isHanging && (!el.templateStyle || el.templateStyle === 'default')) {
                   const textColor = el.color || '#FFFFFF';
                   const extrudeDepth = Math.max(4, Math.floor(el.fontSize * 0.12));
-                  const ringOuter = 8;
-                  const ringInner = 3;
-                  const topOfText = startY - el.fontSize * 0.38;
-                  const ringY = topOfText - ringOuter * 0.6; // Sink the ring slightly into the text
-
-                  // Parse color to make darker shade
                   let r = 200, g = 200, b = 200;
                   if (textColor.startsWith('#') && textColor.length === 7) {
                     r = parseInt(textColor.slice(1,3), 16);
                     g = parseInt(textColor.slice(3,5), 16);
                     b = parseInt(textColor.slice(5,7), 16);
                   }
-                  // Extrusion color (darker)
                   const extrudeColor = `rgb(${Math.floor(r*0.6)}, ${Math.floor(g*0.6)}, ${Math.floor(b*0.6)})`;
-
                   ctx.save();
-                  // Draw extrusion layers from back to front
                   for(let j = extrudeDepth; j >= 1; j--) {
                       ctx.fillStyle = extrudeColor;
-                      
-                      // Add shadow only to the furthest back layer
                       if (j === extrudeDepth) {
                          ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
                          ctx.shadowBlur = 12;
@@ -687,33 +737,13 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                          ctx.shadowOffsetX = 0;
                          ctx.shadowOffsetY = 0;
                       }
-                      
-                      // Draw ring extrusion on the first line
-                      if (i === 0) {
-                         ctx.beginPath();
-                         ctx.arc(0, ringY + j, ringOuter, 0, Math.PI * 2, false);
-                         ctx.arc(0, ringY + j, ringInner, 0, Math.PI * 2, true);
-                         ctx.fill();
-                      }
-                      
                       ctx.fillText(line, 0, lineY + j);
                   }
-                  
-                  // Draw front face
                   ctx.shadowBlur = 0;
                   ctx.shadowOffsetX = 0;
                   ctx.shadowOffsetY = 0;
                   const lineWidth = ctx.measureText(line).width;
                   ctx.fillStyle = el.useGradient ? getStyle(el, -lineWidth/2, lineY, lineWidth/2, lineY) : textColor;
-                  
-                  // Draw ring front
-                  if (i === 0) {
-                     ctx.beginPath();
-                     ctx.arc(0, ringY, ringOuter, 0, Math.PI * 2, false);
-                     ctx.arc(0, ringY, ringInner, 0, Math.PI * 2, true);
-                     ctx.fill();
-                  }
-                  
                   ctx.fillText(line, 0, lineY);
                   ctx.restore();
                   

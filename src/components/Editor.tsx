@@ -228,7 +228,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
       newEl.text = 'VIZPRO';
       newEl.fontSize = 80;
       newEl.fontFamily = 'Arial';
-      newEl.templateStyle = 'hanging';
+      newEl.isHanging = true;
       newEl.y = 300; // Hang it a bit lower
     } else if (type === 'waveform') {
       newEl.width = 800;
@@ -1364,7 +1364,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                 </div>
 
                 
-                {el.type === 'subtitle' && (
+                {(el.type === 'subtitle' || el.type === 'text') && (
                   <div className="space-y-4 pt-4 border-t border-white/5">
                     <div className="flex gap-2 p-1 bg-black/40 rounded-lg">
                       <button 
@@ -1402,6 +1402,9 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                           <button onClick={() => updateElement(el.id, { templateStyle: 'default', color: '#ffffff' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
                             <span className="text-white font-bold">DEFAULT</span>
                           </button>
+                          <button onClick={() => updateElement(el.id, { templateStyle: 'layered_outline', color: '#E87D2A' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
+                            <span className="text-white font-bold text-xs" style={{ WebkitTextStroke: '2px black', paintOrder: 'stroke fill', filter: 'drop-shadow(4px 4px 0px #E87D2A)' }}>RETRO</span>
+                          </button>
                           <button onClick={() => updateElement(el.id, { templateStyle: 'bubble_yellow', color: '#000000' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
                             <span className="bg-[#FFD700] text-black px-2 py-1 rounded font-bold text-xs">BUBBLE</span>
                           </button>
@@ -1423,7 +1426,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                           <button onClick={() => updateElement(el.id, { templateStyle: 'tiktok_karaoke', color: '#00ff00' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
                             <span className="text-white font-bold text-xs" style={{textShadow: '2px 2px 0px #000000'}}>KARAOKE</span>
                           </button>
-                          <button onClick={() => updateElement(el.id, { templateStyle: 'hanging', color: '#fff4e6' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
+                          <button onClick={() => updateElement(el.id, { isHanging: !(el as any).isHanging })} className={`p-3 bg-[#1A1A1A] border ${(el as any).isHanging ? 'border-blue-500' : 'border-white/5 hover:border-blue-500'} rounded flex items-center justify-center min-h-[60px]`}>
                             <span className="text-white font-bold text-xs">HANGING</span>
                           </button>
                           <button onClick={() => updateElement(el.id, { templateStyle: 'tiktok_shadow', color: '#ffffff' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
@@ -1483,7 +1486,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                         <input type="range" min="10" max="200" value={el.fontSize || 16} onChange={e => updateElement(el.id, { fontSize: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
                       </label>
                       
-                      {el.type === 'text' && el.templateStyle === 'hanging' && (
+                      {el.type === 'text' && (el as any).isHanging && (
                         <label className="block mt-4 mb-4">
                           <div className="flex justify-between mb-1">
                             <span className="text-[10px] text-gray-500">Panjang Tali</span>

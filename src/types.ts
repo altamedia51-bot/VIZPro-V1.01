@@ -105,6 +105,19 @@ export interface TextElement extends BaseElement {
   letterSpacing?: number;
   useGradient?: boolean;
   animation?: "none" | "glow_pulse" | "wave" | "bounce" | "drop_bounce";
+  isHanging?: boolean;
+  templateStyle?:
+    | "default"
+    | "bubble_yellow"
+    | "bubble_black"
+    | "neon"
+    | "glow_border"
+    | "layered_outline"
+    | "tiktok_pop"
+    | "tiktok_karaoke"
+    | "tiktok_shadow"
+    | "highlight_pop"
+    | "background_box";
   textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
   backgroundColor?: string;
   backgroundOpacity?: number;
@@ -221,8 +234,8 @@ export interface SubtitleElement extends BaseElement {
     | "tiktok_karaoke"
     | "tiktok_shadow"
     | "highlight_pop"
-    | "hanging"
-    | "background_box";
+    | "background_box"
+    | "layered_outline";
   textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
   backgroundColor?: string;
   backgroundOpacity?: number;
