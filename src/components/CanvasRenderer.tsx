@@ -693,6 +693,55 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   ctx.shadowBlur = 0;
                   ctx.fillStyle = '#FFFFFF';
                   ctx.fillText(line, 0, lineY);
+                } else if (el.templateStyle === 'brush_stroke') {
+                  // A slight textured shadow for brush stroke text
+                  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+                  ctx.shadowBlur = 10;
+                  ctx.shadowOffsetX = 2;
+                  ctx.shadowOffsetY = 4;
+                  ctx.fillStyle = el.color || '#FFFFFF';
+                  ctx.fillText(line, 0, lineY);
+                  // Reset shadow
+                  ctx.shadowBlur = 0;
+                  ctx.shadowOffsetX = 0;
+                  ctx.shadowOffsetY = 0;
+                } else if (el.templateStyle === 'colorful_words') {
+                  const palette = ['#FFB3C6', '#FFD166', '#A0C4FF', '#FF9F1C'];
+                  
+                  ctx.textAlign = 'left';
+                  const words = line.split(' ');
+                  
+                  // Calculate total line width by simulating with spaces
+                  let totalWidth = 0;
+                  words.forEach((word, idx) => {
+                     totalWidth += ctx.measureText(word).width;
+                     if (idx < words.length - 1) {
+                         totalWidth += ctx.measureText(' ').width;
+                     }
+                  });
+                  
+                  let currentX = -totalWidth / 2;
+                  
+                  words.forEach((word, wordIdx) => {
+                     // Determine global word index based on all previous lines? 
+                     // The problem is we don't have global word index easily here.
+                     // But we can just use wordIdx per line, or maybe compute a rough global index
+                     // For simplicity, we just use wordIdx % palette.length
+                     // To make it continuous, let's calculate a global offset up to this line
+                     let wordsBeforeThisLine = 0;
+                     for (let pastLine = 0; pastLine < i; pastLine++) {
+                         wordsBeforeThisLine += lines[pastLine].split(' ').length;
+                     }
+                     const globalIdx = wordsBeforeThisLine + wordIdx;
+                     
+                     ctx.fillStyle = palette[globalIdx % palette.length];
+                     ctx.fillText(word, currentX, lineY);
+                     currentX += ctx.measureText(word).width;
+                     if (wordIdx < words.length - 1) {
+                         currentX += ctx.measureText(' ').width;
+                     }
+                  });
+                  ctx.textAlign = 'center'; // Restore
                 } else if (el.templateStyle === 'tiktok_pop' || el.templateStyle === 'tiktok_shadow') {
                   // TikTok text shadow
                   ctx.fillStyle = el.color || '#FFFFFF';
