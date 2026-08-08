@@ -705,6 +705,19 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   ctx.shadowBlur = 0;
                   ctx.shadowOffsetX = 0;
                   ctx.shadowOffsetY = 0;
+                } else if (el.templateStyle === 'vintage_brush') {
+                  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                  ctx.shadowBlur = 8;
+                  ctx.shadowOffsetX = 3;
+                  ctx.shadowOffsetY = 3;
+                  ctx.fillStyle = el.color || '#FFFFFF';
+                  ctx.fillText(line, 0, lineY);
+                  // Second layer for rough edge look
+                  ctx.shadowBlur = 0;
+                  ctx.shadowOffsetX = 0;
+                  ctx.shadowOffsetY = 0;
+                  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                  ctx.fillText(line, 1, lineY + 1);
                 } else if (el.templateStyle === 'colorful_words') {
                   const palette = ['#FFB3C6', '#FFD166', '#A0C4FF', '#FF9F1C'];
                   
