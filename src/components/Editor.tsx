@@ -19,44 +19,59 @@ type TabType = 'audio' | 'visualizer' | 'text' | 'background' | 'layers';
 type FilterType = 'spectrum' | 'circular' | 'waves' | 'glow' | 'cyber' | 'particles' | 'shapes' | 'elements';
 
 export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit }) => {
-  const [projectState, setProjectState] = useState<Project>(initialProject);
-  const [history, setHistory] = useState<Project[]>([initialProject]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-  const historyIndexRef = useRef(0);
-  historyIndexRef.current = historyIndex;
+  const [historyState, setHistoryState] = useState<{ past: Project[], present: Project, future: Project[] }>({
+    past: [],
+    present: initialProject,
+    future: []
+  });
+  
+  const project = historyState.present;
 
   const setProject = useCallback((newProjectOrUpdater: React.SetStateAction<Project>) => {
-    setProjectState(prev => {
-        const nextProject = typeof newProjectOrUpdater === 'function' ? (newProjectOrUpdater as any)(prev) : newProjectOrUpdater;
+    setHistoryState(state => {
+        const nextProject = typeof newProjectOrUpdater === 'function' ? (newProjectOrUpdater as any)(state.present) : newProjectOrUpdater;
         
-        if (JSON.stringify(prev) !== JSON.stringify(nextProject)) {
-            setHistory(prevHistory => {
-                const newHistory = prevHistory.slice(0, historyIndexRef.current + 1);
-                return [...newHistory, nextProject];
-            });
-            setHistoryIndex(prevIndex => prevIndex + 1);
+        if (JSON.stringify(state.present) === JSON.stringify(nextProject)) {
+            return state;
         }
-
-        return nextProject;
+        
+        return {
+            past: [...state.past, state.present],
+            present: nextProject,
+            future: []
+        };
     });
   }, []);
-  const project = projectState;
 
   const handleUndo = useCallback(() => {
-    if (historyIndex > 0) {
-      const prevIndex = historyIndex - 1;
-      setHistoryIndex(prevIndex);
-      setProjectState(history[prevIndex]);
-    }
-  }, [history, historyIndex]);
+    setHistoryState(state => {
+      if (state.past.length === 0) return state;
+      const newPast = [...state.past];
+      const newPresent = newPast.pop()!;
+      return {
+        past: newPast,
+        present: newPresent,
+        future: [state.present, ...state.future]
+      };
+    });
+  }, []);
 
   const handleRedo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const nextIndex = historyIndex + 1;
-      setHistoryIndex(nextIndex);
-      setProjectState(history[nextIndex]);
-    }
-  }, [history, historyIndex]);
+    setHistoryState(state => {
+      if (state.future.length === 0) return state;
+      const newFuture = [...state.future];
+      const newPresent = newFuture.shift()!;
+      return {
+        past: [...state.past, state.present],
+        present: newPresent,
+        future: newFuture
+      };
+    });
+  }, []);
+  
+  // Variables for UI rendering
+  const historyIndex = historyState.past.length;
+  const history = [...historyState.past, historyState.present, ...historyState.future];
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [fps, setFps] = useState(60);
