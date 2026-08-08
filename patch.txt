@@ -1,0 +1,27 @@
+             ctx.fillStyle = flareGrad;
+             ctx.fillRect(0, cy - 5, canvas.width, 10);
+             ctx.restore();
+          }
+        }
+      }
+
+      if (!isRecording && snapLinesRef.current && snapLinesRef.current.length > 0) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.strokeStyle = '#e94560';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        snapLinesRef.current.forEach(line => {
+          if (line.axis === 'x') {
+            ctx.moveTo(line.pos, 0);
+            ctx.lineTo(line.pos, canvas.height);
+          } else if (line.axis === 'y') {
+            ctx.moveTo(0, line.pos);
+            ctx.lineTo(canvas.width, line.pos);
+          }
+        });
+        ctx.stroke();
+        ctx.restore();
+      }
+    };

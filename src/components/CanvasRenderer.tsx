@@ -25,6 +25,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
   const bgImageRef = useRef<HTMLImageElement | null>(null);
   const bgVideoRef = useRef<HTMLVideoElement | null>(null);
   const imageCacheRef = useRef<Record<string, HTMLImageElement>>({});
+  const snapLinesRef = useRef<{ axis: 'x' | 'y', pos: number }[]>([]);
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [renderCount, setRenderCount] = useState(0);
@@ -121,19 +122,55 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
   };
 
   const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (draggingId && onUpdateElement) {
+    if (draggingId && onUpdateElement && project) {
       // Prevent default to stop pull-to-refresh on mobile if dragging
       // e.preventDefault(); 
       const { x, y } = getMousePos(e);
+      let newX = Math.round(x - dragOffset.current.x);
+      let newY = Math.round(y - dragOffset.current.y);
+
+      const snapLines: { axis: 'x' | 'y', pos: number }[] = [];
+      const SNAP_TOLERANCE = 10;
+      
+      const res = project.resolution || { width: 1280, height: 720 };
+      const centerX = res.width / 2;
+      const centerY = res.height / 2;
+
+      if (Math.abs(newX - centerX) < SNAP_TOLERANCE) {
+        newX = centerX;
+        snapLines.push({ axis: 'x', pos: centerX });
+      }
+      if (Math.abs(newY - centerY) < SNAP_TOLERANCE) {
+        newY = centerY;
+        snapLines.push({ axis: 'y', pos: centerY });
+      }
+
+      project.elements.forEach(el => {
+        const draggedElement = project.elements.find(e => e.id === draggingId);
+        if (el.id === draggingId || (draggedElement && el.groupId === draggedElement.groupId && el.groupId !== undefined)) return;
+        
+        if (Math.abs(newX - el.x) < SNAP_TOLERANCE) {
+          newX = el.x;
+          snapLines.push({ axis: 'x', pos: el.x });
+        }
+        if (Math.abs(newY - el.y) < SNAP_TOLERANCE) {
+          newY = el.y;
+          snapLines.push({ axis: 'y', pos: el.y });
+        }
+      });
+
+      snapLinesRef.current = snapLines;
+
       onUpdateElement(draggingId, {
-        x: Math.round(x - dragOffset.current.x),
-        y: Math.round(y - dragOffset.current.y)
+        x: newX,
+        y: newY
       });
     }
   };
 
   const handlePointerUp = () => {
     setDraggingId(null);
+    snapLinesRef.current = [];
   };
 
   useImperativeHandle(ref, () => ({
@@ -1562,6 +1599,25 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
         }
       }
 
+      if (!isRecording && snapLinesRef.current && snapLinesRef.current.length > 0) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.strokeStyle = '#e94560';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        snapLinesRef.current.forEach(line => {
+          if (line.axis === 'x') {
+            ctx.moveTo(line.pos, 0);
+            ctx.lineTo(line.pos, canvas.height);
+          } else if (line.axis === 'y') {
+            ctx.moveTo(0, line.pos);
+            ctx.lineTo(canvas.width, line.pos);
+          }
+        });
+        ctx.stroke();
+        ctx.restore();
+      }
     };
 
     draw();
