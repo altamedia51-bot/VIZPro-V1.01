@@ -106,6 +106,8 @@ export interface TextElement extends BaseElement {
   useGradient?: boolean;
   animation?: "none" | "glow_pulse" | "wave" | "bounce" | "drop_bounce";
   textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
+  backgroundColor?: string;
+  backgroundOpacity?: number;
 }
 export interface WaveformElement extends BaseElement {
   type: "waveform";
@@ -219,8 +221,11 @@ export interface SubtitleElement extends BaseElement {
     | "tiktok_karaoke"
     | "tiktok_shadow"
     | "highlight_pop"
-    | "hanging";
+    | "hanging"
+    | "background_box";
   textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
+  backgroundColor?: string;
+  backgroundOpacity?: number;
 }
 export interface DigitalMatrixRainElement extends BaseElement {
   type: "digital_matrix_rain";

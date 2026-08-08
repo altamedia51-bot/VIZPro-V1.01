@@ -1,0 +1,4 @@
+  textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
+  backgroundColor?: string;
+  backgroundOpacity?: number;
+}

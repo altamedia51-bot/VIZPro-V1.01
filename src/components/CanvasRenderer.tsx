@@ -580,15 +580,26 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
               }
 
               // Pre-render Backgrounds
-              if (el.templateStyle === 'bubble_yellow' || el.templateStyle === 'bubble_black') {
+              if (el.templateStyle === 'bubble_yellow' || el.templateStyle === 'bubble_black' || el.templateStyle === 'background_box' || el.templateStyle === 'background_box') {
                  lines.forEach((line, i) => {
                    const lineWidth = ctx.measureText(line).width;
-                   ctx.fillStyle = el.templateStyle === 'bubble_yellow' ? '#FFD700' : 'rgba(0, 0, 0, 0.7)';
+                   if (el.templateStyle === 'background_box') {
+                     // Set opacity and color
+                     const bgOpacity = (el as any).backgroundOpacity !== undefined ? (el as any).backgroundOpacity : 0.8;
+                     ctx.globalAlpha = bgOpacity * el.opacity * alpha;
+                     ctx.fillStyle = (el as any).backgroundColor || '#000000';
+                   } else {
+                     ctx.fillStyle = el.templateStyle === 'bubble_yellow' ? '#FFD700' : 'rgba(0, 0, 0, 0.7)';
+                   }
                    ctx.beginPath();
-                   ctx.roundRect(-lineWidth/2 - paddingX, startY + i * lineHeight - el.fontSize/2 - paddingY, lineWidth + paddingX*2, el.fontSize + paddingY*2, el.templateStyle === 'bubble_yellow' ? 12 : 8);
+                   const borderRadius = el.templateStyle === 'bubble_yellow' ? 12 : (el.templateStyle === 'background_box' ? 16 : 8);
+                   ctx.roundRect(-lineWidth/2 - paddingX, startY + i * lineHeight - el.fontSize/2 - paddingY, lineWidth + paddingX*2, el.fontSize + paddingY*2, borderRadius);
                    ctx.fill();
                    
-                   if (el.templateStyle === 'bubble_black') {
+                   // Reset global alpha after drawing background
+                   ctx.globalAlpha = el.opacity * alpha;
+                   
+                   if (el.templateStyle === 'bubble_black' || el.templateStyle === 'background_box') {
                      ctx.strokeStyle = el.color || '#FFFFFF';
                      ctx.lineWidth = 2;
                      ctx.stroke();
@@ -603,7 +614,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                 if (el.templateStyle === 'bubble_yellow') {
                   ctx.fillStyle = '#000000';
                   ctx.fillText(line, 0, lineY);
-                } else if (el.templateStyle === 'bubble_black') {
+                } else if (el.templateStyle === 'bubble_black' || el.templateStyle === 'background_box') {
                   ctx.fillStyle = el.color || '#FFFFFF';
                   ctx.fillText(line, 0, lineY);
                 } else if (el.templateStyle === 'neon') {
