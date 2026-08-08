@@ -1,27 +1,38 @@
-             ctx.fillStyle = flareGrad;
-             ctx.fillRect(0, cy - 5, canvas.width, 10);
-             ctx.restore();
-          }
-        }
-      }
+  const [projectState, setProjectState] = useState<Project>(initialProject);
+  const [history, setHistory] = useState<Project[]>([initialProject]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const historyIndexRef = useRef(0);
+  historyIndexRef.current = historyIndex;
 
-      if (!isRecording && snapLinesRef.current && snapLinesRef.current.length > 0) {
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.strokeStyle = '#e94560';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([5, 5]);
-        ctx.beginPath();
-        snapLinesRef.current.forEach(line => {
-          if (line.axis === 'x') {
-            ctx.moveTo(line.pos, 0);
-            ctx.lineTo(line.pos, canvas.height);
-          } else if (line.axis === 'y') {
-            ctx.moveTo(0, line.pos);
-            ctx.lineTo(canvas.width, line.pos);
-          }
-        });
-        ctx.stroke();
-        ctx.restore();
-      }
-    };
+  const setProject = useCallback((newProjectOrUpdater: React.SetStateAction<Project>) => {
+    setProjectState(prev => {
+        const nextProject = typeof newProjectOrUpdater === 'function' ? (newProjectOrUpdater as any)(prev) : newProjectOrUpdater;
+        
+        if (JSON.stringify(prev) !== JSON.stringify(nextProject)) {
+            setHistory(prevHistory => {
+                const newHistory = prevHistory.slice(0, historyIndexRef.current + 1);
+                return [...newHistory, nextProject];
+            });
+            setHistoryIndex(prevIndex => prevIndex + 1);
+        }
+
+        return nextProject;
+    });
+  }, []);
+  const project = projectState;
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1;
+      setHistoryIndex(prevIndex);
+      setProjectState(history[prevIndex]);
+    }
+  }, [history, historyIndex]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextIndex = historyIndex + 1;
+      setHistoryIndex(nextIndex);
+      setProjectState(history[nextIndex]);
+    }
+  }, [history, historyIndex]);

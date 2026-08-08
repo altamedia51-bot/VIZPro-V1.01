@@ -1,0 +1,6 @@
+            <button onClick={handleUndo} disabled={historyIndex === 0} className={`w-8 h-8 flex items-center justify-center transition-colors ${historyIndex > 0 ? 'text-gray-300 hover:text-white' : 'text-gray-700 cursor-not-allowed'}`}>
+              <Undo2 size={16} />
+            </button>
+            <button onClick={handleRedo} disabled={historyIndex >= history.length - 1} className={`w-8 h-8 flex items-center justify-center transition-colors ${historyIndex < history.length - 1 ? 'text-gray-300 hover:text-white' : 'text-gray-700 cursor-not-allowed'}`}>
+              <Redo2 size={16} />
+            </button>

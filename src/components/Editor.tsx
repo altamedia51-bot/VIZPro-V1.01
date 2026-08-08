@@ -19,7 +19,44 @@ type TabType = 'audio' | 'visualizer' | 'text' | 'background' | 'layers';
 type FilterType = 'spectrum' | 'circular' | 'waves' | 'glow' | 'cyber' | 'particles' | 'shapes' | 'elements';
 
 export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit }) => {
-  const [project, setProject] = useState<Project>(initialProject);
+  const [projectState, setProjectState] = useState<Project>(initialProject);
+  const [history, setHistory] = useState<Project[]>([initialProject]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const historyIndexRef = useRef(0);
+  historyIndexRef.current = historyIndex;
+
+  const setProject = useCallback((newProjectOrUpdater: React.SetStateAction<Project>) => {
+    setProjectState(prev => {
+        const nextProject = typeof newProjectOrUpdater === 'function' ? (newProjectOrUpdater as any)(prev) : newProjectOrUpdater;
+        
+        if (JSON.stringify(prev) !== JSON.stringify(nextProject)) {
+            setHistory(prevHistory => {
+                const newHistory = prevHistory.slice(0, historyIndexRef.current + 1);
+                return [...newHistory, nextProject];
+            });
+            setHistoryIndex(prevIndex => prevIndex + 1);
+        }
+
+        return nextProject;
+    });
+  }, []);
+  const project = projectState;
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1;
+      setHistoryIndex(prevIndex);
+      setProjectState(history[prevIndex]);
+    }
+  }, [history, historyIndex]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextIndex = historyIndex + 1;
+      setHistoryIndex(nextIndex);
+      setProjectState(history[nextIndex]);
+    }
+  }, [history, historyIndex]);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [fps, setFps] = useState(60);
@@ -384,10 +421,10 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
         <div className="flex items-center gap-3">
           
           <div className="flex items-center gap-1">
-            <button className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors">
+            <button onClick={handleUndo} disabled={historyIndex === 0} className={`w-8 h-8 flex items-center justify-center transition-colors ${historyIndex > 0 ? 'text-gray-300 hover:text-white' : 'text-gray-700 cursor-not-allowed'}`}>
               <Undo2 size={16} />
             </button>
-            <button className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors">
+            <button onClick={handleRedo} disabled={historyIndex >= history.length - 1} className={`w-8 h-8 flex items-center justify-center transition-colors ${historyIndex < history.length - 1 ? 'text-gray-300 hover:text-white' : 'text-gray-700 cursor-not-allowed'}`}>
               <Redo2 size={16} />
             </button>
           </div>
