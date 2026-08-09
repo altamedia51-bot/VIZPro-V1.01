@@ -486,6 +486,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                  if (!isRecording && el.type === 'text' && (draggingId === el.id || selectedElementId === el.id)) {
                    textToRender = 'Teks Baru';
                  } else {
+                   ctx.restore();
                    continue;
                  }
             }
