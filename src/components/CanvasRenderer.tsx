@@ -729,6 +729,9 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   ctx.lineWidth = 1.5;
                   ctx.strokeStyle = 'rgba(0,0,0,0.3)';
                   ctx.strokeText(line, 0, lineY);
+                } else if (el.templateStyle === 'pen_story') {
+                  ctx.fillStyle = el.color || '#000000';
+                  ctx.fillText(line, 0, lineY);
                 } else if (el.templateStyle === 'vintage_brush') {
                   ctx.shadowColor = 'rgba(0,0,0,0.6)';
                   ctx.shadowBlur = 8;
