@@ -1511,7 +1511,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                         <input type="range" min="10" max="200" value={el.fontSize || 16} onChange={e => updateElement(el.id, { fontSize: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
                       </label>
                       
-                      {el.type === 'text' && (el as any).isHanging && (
+                      {(el.type === 'text' || el.type === 'subtitle') && (el as any).isHanging && (
                         <label className="block mt-4 mb-4">
                           <div className="flex justify-between mb-1">
                             <span className="text-[10px] text-gray-500">Panjang Tali</span>
