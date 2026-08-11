@@ -254,6 +254,36 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
     } else if (type === 'circular_spectrum') {
       newEl.radius = 150;
       newEl.height = 50;
+    } else if (type === 'radial_dots') {
+      newEl.radius = 150;
+      newEl.count = 60;
+      newEl.layers = 5;
+      newEl.dotSize = 5;
+    } else if (type === 'glowing_blocks') {
+      newEl.columns = 8;
+      newEl.rows = 6;
+      newEl.blockWidth = 20;
+      newEl.blockHeight = 40;
+      newEl.spacing = 10;
+      newEl.glowIntensity = 20;
+      newEl.color = '#ff0000';
+    } else if (type === 'perspective_ring') {
+      newEl.radius = 200;
+      newEl.perspective = 0.3;
+      newEl.thickness = 15;
+      newEl.segments = 60;
+    } else if (type === 'progress_bar') {
+      newEl.width = 600;
+      newEl.height = 4;
+      newEl.showTime = true;
+      newEl.fontSize = 24;
+      newEl.fontFamily = 'Inter';
+    } else if (type === 'water_splash') {
+      newEl.particleCount = 150;
+      newEl.splashRadius = 250;
+      newEl.dropSize = 5;
+      newEl.speed = 1;
+      newEl.color = '#00ffff';
     } else if (type === 'symmetrical_mirror') {
       newEl.width = 800;
       newEl.height = 200;
@@ -1225,9 +1255,14 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                     { type: 'circle', name: 'Radial Circle', category: 'circular', label: 'CIRCULAR' },
                     { type: 'double_circle', name: 'Double Circle Ring', category: 'circular', label: 'CIRCULAR' },
                     { type: 'circular_spectrum', name: 'Circular Spectrum', category: 'circular', label: 'CIRCULAR' },
+                    { type: 'radial_dots', name: 'Dotted Circular', category: 'circular', label: 'CIRCULAR' },
                     { type: 'bass_pulse', name: 'Bass Pulse Rings', category: 'circular', label: 'CIRCULAR' },
                     { type: 'triangle_spectrum', name: 'Triangle Spectrum', category: 'shapes', label: 'SHAPE' },
                     { type: 'diamond_spectrum', name: 'Diamond Spectrum', category: 'shapes', label: 'SHAPE' },
+                    { type: 'glowing_blocks', name: 'Glowing Blocks', category: 'shapes', label: 'SHAPE' },
+                    { type: 'perspective_ring', name: '3D Perspective Ring', category: 'circular', label: 'CIRCULAR' },
+                    { type: 'water_splash', name: 'Water Splash Burst', category: 'particles', label: 'PARTICLES' },
+                    { type: 'progress_bar', name: 'Progress Bar', category: 'basic', label: 'BASIC' },
                     { type: 'glowing_ring', name: 'Glowing Ring', category: 'glow', label: 'GLOW' },
                     { type: 'neon_grid', name: 'Neon Synthwave', category: 'cyber', label: 'CYBER' },
                     { type: 'digital_matrix_rain', name: 'Digital Matrix Rain', category: 'cyber', label: 'CYBER' },
@@ -1278,6 +1313,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                 isPlaying={isPlaying || isRecording}
                 isRecording={isRecording}
                 currentTime={currentTime}
+                duration={duration}
                 selectedElementId={selectedElementId}
                 onUpdateElement={updateElement}
                 onSelectElement={setSelectedElementId}
@@ -1614,13 +1650,150 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                     </>
                   )}
 
-                  {(el.type === 'double_circle' || el.type === 'circular_spectrum' || el.type === 'bass_pulse' || el.type === 'spiral_galaxy' || el.type === 'triangle_spectrum' || el.type === 'diamond_spectrum' || el.type === 'glowing_ring') && (
+                  {(el.type === 'double_circle' || el.type === 'circular_spectrum' || el.type === 'bass_pulse' || el.type === 'spiral_galaxy' || el.type === 'triangle_spectrum' || el.type === 'diamond_spectrum' || el.type === 'glowing_ring' || el.type === 'radial_dots' || el.type === 'perspective_ring') && (
                     <label className="block">
                       <div className="flex justify-between mb-1">
                         <span className="text-[10px] text-gray-500">Radius ({el.radius}px)</span>
                       </div>
                       <input type="range" min="20" max="400" value={el.radius || 100} onChange={e => updateElement(el.id, { radius: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
                     </label>
+                  )}
+
+                  {el.type === 'perspective_ring' && (
+                    <>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Perspektif (Squash: {el.perspective})</span>
+                        </div>
+                        <input type="range" min="0.1" max="1" step="0.05" value={el.perspective || 0.3} onChange={e => updateElement(el.id, { perspective: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Ketebalan ({el.thickness}px)</span>
+                        </div>
+                        <input type="range" min="1" max="50" value={el.thickness || 15} onChange={e => updateElement(el.id, { thickness: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Segmen ({el.segments})</span>
+                        </div>
+                        <input type="range" min="10" max="120" value={el.segments || 60} onChange={e => updateElement(el.id, { segments: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                    </>
+                  )}
+
+                  {el.type === 'progress_bar' && (
+                    <>
+                      <div className="flex items-center gap-2 mt-4 mb-2">
+                        <input 
+                          type="checkbox" 
+                          id={`show-time-${el.id}`}
+                          checked={el.showTime !== false} 
+                          onChange={e => updateElement(el.id, { showTime: e.target.checked })}
+                          className="rounded bg-black/50 border-white/10 text-indigo-500"
+                        />
+                        <label htmlFor={`show-time-${el.id}`} className="text-[10px] text-gray-400 cursor-pointer">Tampilkan Waktu (0:00)</label>
+                      </div>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Ukuran Font ({el.fontSize}px)</span>
+                        </div>
+                        <input type="range" min="10" max="100" value={el.fontSize || 24} onChange={e => updateElement(el.id, { fontSize: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                    </>
+                  )}
+
+                  {el.type === 'water_splash' && (
+                    <>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Jumlah Percikan ({el.particleCount})</span>
+                        </div>
+                        <input type="range" min="10" max="500" value={el.particleCount || 150} onChange={e => updateElement(el.id, { particleCount: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Radius Dasar ({el.splashRadius}px)</span>
+                        </div>
+                        <input type="range" min="50" max="800" value={el.splashRadius || 250} onChange={e => updateElement(el.id, { splashRadius: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Ukuran Tetesan ({el.dropSize}px)</span>
+                        </div>
+                        <input type="range" min="1" max="20" value={el.dropSize || 5} onChange={e => updateElement(el.id, { dropSize: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Kecepatan Splash</span>
+                        </div>
+                        <input type="range" min="0.1" max="3" step="0.1" value={el.speed || 1} onChange={e => updateElement(el.id, { speed: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                    </>
+                  )}
+
+                  {el.type === 'radial_dots' && (
+                    <>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Jumlah Titik/Layer ({el.count})</span>
+                        </div>
+                        <input type="range" min="10" max="200" value={el.count || 60} onChange={e => updateElement(el.id, { count: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Jumlah Layer ({el.layers})</span>
+                        </div>
+                        <input type="range" min="1" max="20" value={el.layers || 5} onChange={e => updateElement(el.id, { layers: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Ukuran Titik ({el.dotSize}px)</span>
+                        </div>
+                        <input type="range" min="1" max="20" value={el.dotSize || 5} onChange={e => updateElement(el.id, { dotSize: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                    </>
+                  )}
+
+                  {el.type === 'glowing_blocks' && (
+                    <>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Kolom ({el.columns})</span>
+                        </div>
+                        <input type="range" min="2" max="40" value={el.columns || 8} onChange={e => updateElement(el.id, { columns: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Baris ({el.rows})</span>
+                        </div>
+                        <input type="range" min="2" max="40" value={el.rows || 6} onChange={e => updateElement(el.id, { rows: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Lebar Blok ({el.blockWidth}px)</span>
+                        </div>
+                        <input type="range" min="5" max="100" value={el.blockWidth || 20} onChange={e => updateElement(el.id, { blockWidth: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Tinggi Blok Max ({el.blockHeight}px)</span>
+                        </div>
+                        <input type="range" min="10" max="200" value={el.blockHeight || 40} onChange={e => updateElement(el.id, { blockHeight: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Jarak Spasi ({el.spacing}px)</span>
+                        </div>
+                        <input type="range" min="0" max="50" value={el.spacing || 10} onChange={e => updateElement(el.id, { spacing: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Intensitas Glow ({el.glowIntensity})</span>
+                        </div>
+                        <input type="range" min="0" max="100" value={el.glowIntensity || 20} onChange={e => updateElement(el.id, { glowIntensity: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+                    </>
                   )}
 
                   {(el.type === 'smooth_curve' || el.type === 'symmetrical_mirror' || el.type === 'multi_sine' || el.type === 'single_sine' || el.type === 'flames' || el.type === 'waveform' || el.type === 'mirrored_bars') && (

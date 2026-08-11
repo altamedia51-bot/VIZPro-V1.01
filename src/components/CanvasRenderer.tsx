@@ -8,6 +8,7 @@ interface CanvasRendererProps {
   isPlaying: boolean;
   isRecording?: boolean;
   currentTime?: number;
+  duration?: number;
   selectedElementId?: string | null;
   onUpdateElement?: (id: string, updates: Partial<VizElement>) => void;
   onSelectElement?: (id: string | null) => void;
@@ -17,7 +18,7 @@ export interface CanvasRendererRef {
   getCanvas: () => HTMLCanvasElement | null;
 }
 
-export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>(({ project, getAudioData, getWaveformData, isPlaying, isRecording = false, currentTime = 0, selectedElementId, onUpdateElement, onSelectElement }, ref) => {
+export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>(({ project, getAudioData, getWaveformData, isPlaying, isRecording = false, currentTime = 0, duration = 0, selectedElementId, onUpdateElement, onSelectElement }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const bgMaskCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -73,15 +74,28 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
       let hit = false;
       const elScale = el.scale || 1;
       
-      if (el.type === 'circle' || el.type === 'double_circle' || el.type === 'circular_spectrum' || el.type === 'bass_pulse' || el.type === 'triangle_spectrum' || el.type === 'diamond_spectrum' || el.type === 'glowing_ring') {
+      if (el.type === 'circle' || el.type === 'double_circle' || el.type === 'circular_spectrum' || el.type === 'bass_pulse' || el.type === 'triangle_spectrum' || el.type === 'diamond_spectrum' || el.type === 'glowing_ring' || el.type === 'radial_dots' || el.type === 'perspective_ring') {
         const dx = x - el.x;
         const dy = y - el.y;
         hit = Math.sqrt(dx * dx + dy * dy) <= el.radius * elScale;
+      } else if (el.type === 'progress_bar') {
+        const e = el as any;
+        const totalW = e.width;
+        const totalH = e.height + (e.showTime !== false ? e.fontSize * 2 : 0);
+        hit = Math.abs(x - el.x) <= (totalW * elScale) / 2 && Math.abs(y - el.y) <= (totalH * elScale) / 2;
+      } else if (el.type === 'water_splash') {
+        const e = el as any;
+        hit = Math.abs(x - el.x) <= (e.splashRadius * elScale) && y >= el.y - (300 * elScale) && y <= el.y;
       } else if (el.type === 'image') {
         const imgEl = el as any;
         const w = (imgEl.width || 48) * elScale;
         const h = (imgEl.height || 48) * elScale;
         hit = x >= el.x - w / 2 && x <= el.x + w / 2 && y >= el.y - h / 2 && y <= el.y + h / 2;
+      } else if (el.type === 'glowing_blocks') {
+        const e = el as any;
+        const totalW = e.columns * e.blockWidth + Math.max(0, e.columns - 1) * e.spacing;
+        const totalH = e.rows * e.blockHeight + Math.max(0, e.rows - 1) * e.spacing;
+        hit = Math.abs(x - el.x) <= (totalW * elScale) / 2 && Math.abs(y - el.y) <= (totalH * elScale) / 2;
       } else if ((el.type === 'text' || el.type === 'subtitle') && ctx) {
         ctx.font = `${el.fontSize}px ${el.fontFamily}`;
         const textToMeasure = el.type === 'text' ? el.text : 'Subtitle Text';
@@ -1177,6 +1191,282 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
               ctx.fillRect(el.radius, -2, barHeight, 4);
               ctx.restore();
             }
+          }
+          else if (el.type === 'radial_dots') {
+            const count = (el as any).count || 60;
+            const layers = (el as any).layers || 5;
+            const dotSize = (el as any).dotSize || 5;
+            const step = (Math.PI * 2) / count;
+            
+            const rMax = el.radius + layers * dotSize * 3;
+            ctx.fillStyle = getStyle(el, el.x - rMax, el.y - rMax, el.x + rMax, el.y + rMax);
+            
+            for (let i = 0; i < count; i++) {
+              const halfCount = count / 2;
+              let mirrorIndex = i;
+              if (i > halfCount) {
+                  mirrorIndex = count - i;
+              }
+              const freqIndex = Math.floor((mirrorIndex / halfCount) * (freqLength * 0.4));
+              const value = freqData[freqIndex] || 0;
+              const normalized = value / 255;
+              
+              const activeLayers = (normalized * layers * 1.5) + 0.2; // slight base visibility
+              
+              const angle = i * step - Math.PI / 2;
+              const cosA = Math.cos(angle);
+              const sinA = Math.sin(angle);
+              
+              for (let j = 0; j < layers; j++) {
+                  const distance = el.radius + j * (dotSize * 3);
+                  
+                  let dotAlpha = 0;
+                  if (j < activeLayers) {
+                      dotAlpha = 1;
+                  } else if (j - activeLayers < 1) {
+                      dotAlpha = 1 - (j - activeLayers);
+                  }
+                  
+                  if (dotAlpha > 0.01) {
+                      ctx.globalAlpha = el.opacity * dotAlpha;
+                      const currentDotSize = dotSize * (0.6 + 0.4 * dotAlpha);
+                      
+                      const px = el.x + cosA * distance;
+                      const py = el.y + sinA * distance;
+                      
+                      ctx.beginPath();
+                      ctx.arc(px, py, currentDotSize, 0, Math.PI * 2);
+                      ctx.fill();
+                  }
+              }
+            }
+          }
+          else if (el.type === 'glowing_blocks') {
+            const e = el as any;
+            const cols = e.columns || 8;
+            const rows = e.rows || 6;
+            const blockW = e.blockWidth || 20;
+            const maxBlockH = e.blockHeight || 40;
+            const spacing = e.spacing || 10;
+            const glowIntensity = e.glowIntensity || 20;
+            
+            const totalW = cols * blockW + Math.max(0, cols - 1) * spacing;
+            const totalH = rows * maxBlockH + Math.max(0, rows - 1) * spacing;
+            
+            const startX = el.x - totalW / 2;
+            const startY = el.y - totalH / 2;
+            
+            ctx.fillStyle = getStyle(el, el.x - totalW/2, el.y - totalH/2, el.x + totalW/2, el.y + totalH/2);
+            
+            for (let c = 0; c < cols; c++) {
+               const distFromCenter = Math.abs(c - (cols - 1) / 2);
+               const freqIndex = Math.floor((distFromCenter / (cols/2)) * (freqLength * 0.4));
+               const value = freqData[freqIndex] || 0;
+               const normalized = value / 255;
+               
+               const litRowsHalf = normalized * (rows / 2);
+               
+               for (let r = 0; r < rows; r++) {
+                  const rowDistFromCenter = Math.abs(r - (rows - 1) / 2);
+                  
+                  const litThreshold = litRowsHalf + 0.2; 
+                  
+                  let litAlpha = 0;
+                  if (rowDistFromCenter < litThreshold) {
+                      litAlpha = 1;
+                  } else if (rowDistFromCenter - litThreshold < 1) {
+                      litAlpha = 1 - (rowDistFromCenter - litThreshold);
+                  }
+                  
+                  const alpha = 0.05 + litAlpha * 0.95;
+                  
+                  ctx.globalAlpha = el.opacity * alpha;
+                  
+                  if (litAlpha > 0.1) {
+                      ctx.shadowBlur = glowIntensity * litAlpha;
+                      ctx.shadowColor = el.color;
+                  } else {
+                      ctx.shadowBlur = 0;
+                  }
+                  
+                  const bx = startX + c * (blockW + spacing);
+                  const by = startY + r * (maxBlockH + spacing);
+                  
+                  const currentH = maxBlockH * (0.8 + 0.2 * litAlpha);
+                  const yOffset = (maxBlockH - currentH) / 2;
+                  
+                  ctx.fillRect(bx, by + yOffset, blockW, currentH);
+               }
+            }
+            ctx.shadowBlur = 0;
+          }
+          else if (el.type === 'perspective_ring') {
+            const averageFreq = freqData.length ? freqData.reduce((a,b)=>a+b,0) / freqData.length : 0;
+            const intensity = averageFreq / 255;
+            
+            const pRing = el as any;
+            const r = pRing.radius || 200;
+            const perspective = pRing.perspective || 0.3;
+            const thickness = pRing.thickness || 15;
+            const segments = pRing.segments || 60;
+            const step = (Math.PI * 2) / segments;
+            
+            ctx.save();
+            ctx.translate(el.x, el.y);
+            // apply perspective squash
+            ctx.scale(1, perspective);
+            
+            // Draw background glowing ring
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.lineWidth = thickness * 0.2;
+            ctx.strokeStyle = pRing.useGradient ? (pRing.color2 || '#e94560') : (pRing.color || '#fff');
+            ctx.shadowBlur = 10 + intensity * 30;
+            ctx.shadowColor = ctx.strokeStyle as string;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            // Draw segment dashes based on audio frequency
+            for (let i = 0; i < segments; i++) {
+                const freqIndex = Math.floor((i / segments) * (freqLength * 0.6));
+                const value = freqData[freqIndex] || 0;
+                const normalized = value / 255;
+                
+                const angle = i * step;
+                const cosA = Math.cos(angle);
+                const sinA = Math.sin(angle);
+                
+                const px1 = cosA * (r - thickness / 2);
+                const py1 = sinA * (r - thickness / 2);
+                const px2 = cosA * (r + thickness / 2 + normalized * thickness * 2);
+                const py2 = sinA * (r + thickness / 2 + normalized * thickness * 2);
+                
+                ctx.beginPath();
+                ctx.moveTo(px1, py1);
+                ctx.lineTo(px2, py2);
+                
+                ctx.lineWidth = (Math.PI * r * 2) / segments * 0.5;
+                ctx.strokeStyle = getStyle(el, -r, -r, r, r);
+                
+                if (normalized > 0.2) {
+                    ctx.shadowBlur = normalized * 20;
+                    ctx.shadowColor = el.color || '#fff';
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+                
+                ctx.stroke();
+            }
+            ctx.restore();
+          }
+          else if (el.type === 'progress_bar') {
+             const pBar = el as any;
+             const width = pBar.width || 600;
+             const height = pBar.height || 4;
+             
+             let prog = 0;
+             if (duration && duration > 0 && currentTimeRef.current) {
+                 prog = currentTimeRef.current / duration;
+             }
+             
+             ctx.save();
+             ctx.translate(el.x, el.y);
+             
+             // draw background track
+             ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+             ctx.beginPath();
+             ctx.roundRect(-width/2, -height/2, width, height, height/2);
+             ctx.fill();
+             
+             // draw progress fill and knob
+             if (prog > 0) {
+                 ctx.fillStyle = getStyle(el, -width/2, 0, width/2, 0);
+                 ctx.shadowBlur = 15;
+                 ctx.shadowColor = el.color || '#fff';
+                 
+                 ctx.beginPath();
+                 ctx.roundRect(-width/2, -height/2, width * prog, height, height/2);
+                 ctx.fill();
+                 
+                 // draw knob
+                 ctx.beginPath();
+                 const knobX = -width/2 + width * prog;
+                 ctx.arc(knobX, 0, height * 2.5, 0, Math.PI * 2);
+                 ctx.fill();
+             }
+             ctx.shadowBlur = 0;
+             
+             if (pBar.showTime !== false) {
+                 ctx.fillStyle = '#ffffff';
+                 ctx.font = `${pBar.fontSize || 24}px ${pBar.fontFamily || 'Inter'}`;
+                 ctx.textAlign = 'right';
+                 ctx.textBaseline = 'middle';
+                 
+                 const currentSec = Math.floor(currentTimeRef.current || 0);
+                 const m = Math.floor(currentSec / 60);
+                 const s = currentSec % 60;
+                 const timeStr = `${m}:${s.toString().padStart(2, '0')}`;
+                 
+                 ctx.fillText(timeStr, width/2, height/2 + 20 + (pBar.fontSize || 24)/2);
+             }
+             
+             ctx.restore();
+          }
+          else if (el.type === 'water_splash') {
+            const wSplash = el as any;
+            const pCount = wSplash.particleCount || 150;
+            const splashRadius = wSplash.splashRadius || 250;
+            const dropSize = wSplash.dropSize || 5;
+            const speed = wSplash.speed || 1;
+            
+            const bassSum = freqData.slice(0, 10).reduce((a, b) => a + b, 0);
+            const bassIntensity = (bassSum / (10 * 255));
+            const time = performance.now() * 0.001 * speed;
+            
+            ctx.fillStyle = wSplash.useGradient ? (wSplash.color2 || '#00ffff') : (wSplash.color || '#00ffff');
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = ctx.fillStyle;
+            
+            for (let i = 0; i < pCount; i++) {
+                const randX = Math.sin(i * 1234.5); 
+                const randY = Math.cos(i * 5432.1); 
+                const randSpeed = 1 + (Math.sin(i * 314.15) + 1) * 0.5; 
+                
+                const period = 1.5; 
+                const t = (time * randSpeed + (i * 0.123)) % period; 
+                
+                const startX = el.x + randX * splashRadius * 0.8;
+                const startY = el.y;
+                
+                const vx = randX * 150; 
+                const vy = -300 - (randY + 1.2) * 200 * bassIntensity; 
+                const gravity = 1000;
+                
+                const px = startX + vx * t;
+                const py = startY + vy * t + 0.5 * gravity * t * t;
+                
+                if (py <= startY + 20 && t > 0.05) {
+                    let size = dropSize * (0.5 + bassIntensity * 0.8) * randSpeed;
+                    
+                    if (t > period * 0.7) {
+                       size *= Math.max(0, 1 - (t - period * 0.7) / (period * 0.3));
+                    }
+                    
+                    const alpha = Math.max(0, 1 - (t / period));
+                    ctx.globalAlpha = el.opacity * alpha * (0.2 + bassIntensity * 0.8);
+                    
+                    ctx.beginPath();
+                    const vy_current = vy + gravity * t;
+                    if (vy_current > 50) { 
+                        ctx.ellipse(px, py, Math.max(0.1, size * 0.8), Math.max(0.1, size * 1.5), Math.atan2(vy_current, vx), 0, Math.PI * 2);
+                    } else { 
+                        ctx.arc(px, py, Math.max(0.1, size), 0, Math.PI * 2);
+                    }
+                    ctx.fill();
+                }
+            }
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
           }
           else if (el.type === 'smooth_curve') {
              ctx.lineWidth = el.lineWidth;

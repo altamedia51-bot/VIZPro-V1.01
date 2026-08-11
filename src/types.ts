@@ -69,7 +69,12 @@ export type ElementType =
   | "subtitle"
   | "image"
   | "digital_matrix_rain"
-  | "color_pixel";
+  | "color_pixel"
+  | "radial_dots"
+  | "glowing_blocks"
+  | "perspective_ring"
+  | "progress_bar"
+  | "water_splash";
 export interface BaseElement {
   id: string;
   type: ElementType;
@@ -270,6 +275,44 @@ export interface ColorPixelElement extends BaseElement {
   radius: number;
   lineWidth: number;
 }
+export interface RadialDotsElement extends BaseElement {
+  type: "radial_dots";
+  radius: number;
+  count: number;
+  layers: number;
+  dotSize: number;
+}
+export interface GlowingBlocksElement extends BaseElement {
+  type: "glowing_blocks";
+  columns: number;
+  rows: number;
+  blockWidth: number;
+  blockHeight: number;
+  spacing: number;
+  glowIntensity: number;
+}
+export interface PerspectiveRingElement extends BaseElement {
+  type: "perspective_ring";
+  radius: number;
+  perspective: number; // 0.1 to 1.0 (squash factor)
+  thickness: number;
+  segments: number;
+}
+export interface ProgressBarElement extends BaseElement {
+  type: "progress_bar";
+  width: number;
+  height: number;
+  showTime: boolean;
+  fontSize: number;
+  fontFamily: string;
+}
+export interface WaterSplashElement extends BaseElement {
+  type: "water_splash";
+  particleCount: number;
+  splashRadius: number;
+  dropSize: number;
+  speed: number;
+}
 export type VizElement =
   | BarsElement
   | CircleElement
@@ -295,7 +338,12 @@ export type VizElement =
   | MirroredBarsElement
   | ImageElement
   | DigitalMatrixRainElement
-  | ColorPixelElement;
+  | ColorPixelElement
+  | RadialDotsElement
+  | GlowingBlocksElement
+  | PerspectiveRingElement
+  | ProgressBarElement
+  | WaterSplashElement;
 export interface AudioMetrics {
   rms: number;
   bass: number;

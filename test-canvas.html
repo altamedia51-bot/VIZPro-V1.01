@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<body>
+<canvas id="c" width="400" height="400"></canvas>
+<script>
+const ctx = document.getElementById('c').getContext('2d');
+ctx.fillStyle = 'black';
+ctx.fillRect(0,0,400,400);
+
+const grad = ctx.createLinearGradient(100, 100, 300, 300);
+grad.addColorStop(0, 'red');
+grad.addColorStop(1, 'blue');
+ctx.fillStyle = grad;
+
+ctx.save();
+ctx.translate(200, 200);
+ctx.rotate(Math.PI / 4);
+ctx.fillRect(0, -10, 100, 20); // drawn at 200,200 to 300,200 in M_global? wait, M_local
+ctx.restore();
+</script>
+</body>
+</html>
