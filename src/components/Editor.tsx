@@ -1475,6 +1475,12 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                           <button onClick={() => updateElement(el.id, { templateStyle: 'vintage_brush', fontFamily: 'Rock Salt', color: '#ffffff', rotation: -5 })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
                             <span className="text-white font-bold text-xs" style={{fontFamily: 'Rock Salt', textShadow: '1px 1px 2px rgba(0,0,0,0.8)'}}>VINTAGE</span>
                           </button>
+                          <button onClick={() => updateElement(el.id, { templateStyle: 'black_fire', fontFamily: 'Permanent Marker', color: '#ff6600', useGradient: true, color2: '#ffcc00' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px] overflow-hidden">
+                            <span className="font-bold text-xs" style={{fontFamily: 'Permanent Marker', color: '#ff6600', textShadow: '2px 2px 4px rgba(0,0,0,0.8)'}}>BLACK FIRE</span>
+                          </button>
+                          <button onClick={() => updateElement(el.id, { templateStyle: 'street_dripping', fontFamily: 'Creepster', color: '#ffffff', useGradient: false, rotation: 0 })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px] overflow-hidden">
+                            <span className="font-bold text-xs" style={{fontFamily: 'Creepster', color: '#ffffff', textShadow: '3px 3px 0px #ff0000'}}>STREET DRIP</span>
+                          </button>
                           <button onClick={() => updateElement(el.id, { templateStyle: 'architect', fontFamily: 'Architects Daughter', color: '#000000', rotation: 0 })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
                             <span className="text-white font-bold text-xs uppercase" style={{fontFamily: 'Architects Daughter', textShadow: '1px 1px 0px rgba(0,0,0,0.5)'}}>ARCHITECT</span>
                           </button>

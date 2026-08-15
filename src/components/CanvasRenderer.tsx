@@ -760,6 +760,53 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   ctx.shadowOffsetY = 0;
                   ctx.fillStyle = 'rgba(255,255,255,0.1)';
                   ctx.fillText(line, 1, lineY + 1);
+                } else if (el.templateStyle === 'black_fire') {
+                  // Fire-like text effect
+                  // Draw outer glow (Fire aura)
+                  ctx.shadowColor = el.useGradient ? (el.color2 || '#ff0000') : '#ff0000';
+                  ctx.shadowBlur = 25;
+                  ctx.shadowOffsetX = 0;
+                  ctx.shadowOffsetY = -8;
+                  
+                  // Fill with gradient or solid color
+                  if (el.useGradient) {
+                    const lineGrad = ctx.createLinearGradient(0, lineY - el.fontSize, 0, lineY);
+                    lineGrad.addColorStop(0, '#ffeb3b'); // top (yellow)
+                    lineGrad.addColorStop(0.3, '#ff9800'); // mid-top (orange)
+                    lineGrad.addColorStop(0.7, '#f44336'); // mid-bottom (red)
+                    lineGrad.addColorStop(1, '#b71c1c'); // bottom (dark red)
+                    ctx.fillStyle = lineGrad;
+                  } else {
+                    ctx.fillStyle = el.color || '#ff6600';
+                  }
+                  ctx.fillText(line, 0, lineY);
+                  
+                  // Add subtle dark stroke to make it pop like the image
+                  ctx.shadowBlur = 0;
+                  ctx.shadowOffsetX = 0;
+                  ctx.shadowOffsetY = 0;
+                  ctx.lineWidth = Math.max(1, el.fontSize / 30);
+                  ctx.strokeStyle = 'rgba(20, 0, 0, 0.8)';
+                  ctx.strokeText(line, 0, lineY);
+                } else if (el.templateStyle === 'street_dripping') {
+                  // Street Dripping effect with harsh drop shadow/3D effect like the ANTINK image
+                  ctx.shadowColor = el.color2 || '#ff0000'; // Default red blood shadow
+                  ctx.shadowBlur = 0;
+                  ctx.shadowOffsetX = Math.max(2, el.fontSize / 20);
+                  ctx.shadowOffsetY = Math.max(2, el.fontSize / 20);
+                  
+                  ctx.fillStyle = el.color || '#ffffff';
+                  ctx.fillText(line, 0, lineY);
+                  
+                  // Reset shadow for outline
+                  ctx.shadowColor = 'transparent';
+                  ctx.shadowOffsetX = 0;
+                  ctx.shadowOffsetY = 0;
+                  
+                  // Dark grungy outline
+                  ctx.lineWidth = Math.max(1, el.fontSize / 40);
+                  ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+                  ctx.strokeText(line, 0, lineY);
                 } else if (el.templateStyle === 'colorful_words') {
                   const palette = ['#FFB3C6', '#FFD166', '#A0C4FF', '#FF9F1C'];
                   

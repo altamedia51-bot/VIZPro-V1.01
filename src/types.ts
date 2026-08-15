@@ -128,7 +128,9 @@ export interface TextElement extends BaseElement {
     | "tiktok_karaoke"
     | "tiktok_shadow"
     | "highlight_pop"
-    | "background_box";
+    | "background_box"
+    | "black_fire"
+    | "street_dripping";
   textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
   backgroundColor?: string;
   backgroundOpacity?: number;
@@ -252,7 +254,9 @@ export interface SubtitleElement extends BaseElement {
     | "tiktok_shadow"
     | "highlight_pop"
     | "background_box"
-    | "layered_outline";
+    | "layered_outline"
+    | "black_fire"
+    | "street_dripping";
   textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
   backgroundColor?: string;
   backgroundOpacity?: number;
