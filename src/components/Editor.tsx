@@ -81,6 +81,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
   const [multiSelectIds, setMultiSelectIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('visualizer');
   const [openBgAccordion, setOpenBgAccordion] = useState<string>('type');
+  const [openVizAccordion, setOpenVizAccordion] = useState<string>('spectrum');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('spectrum');
   const [subtitleTab, setSubtitleTab] = useState<'basic' | 'templates'>('templates');
@@ -779,11 +780,8 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
             {activeTab === 'text' && (
               <div className="flex flex-col h-full overflow-hidden p-4">
                 <div className="flex gap-2 mb-4">
-                  <button onClick={() => addElement('text')} className="flex-1 p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center transition-colors text-white font-bold text-sm">
+                  <button onClick={() => addElement('text')} className="w-full p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center transition-colors text-white font-bold text-sm">
                     + TEKS BARU
-                  </button>
-                  <button onClick={() => addElement('banner')} className="flex-1 p-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-center transition-colors text-white font-bold text-sm">
-                    + BANNER BARU
                   </button>
                 </div>
 
@@ -1255,62 +1253,91 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                 </div>
 
                 {/* Filters */}
-                <div className="grid grid-cols-4 gap-2 mb-4">
-                  {(['spectrum', 'circular', 'waves', 'glow', 'cyber', 'particles', 'shapes', 'elements'] as FilterType[]).map(filter => (
-                    <button 
-                      key={filter}
-                      onClick={() => setActiveFilter(filter)}
-                      className={`w-full py-2 px-1 text-[9px] sm:text-[10px] font-bold uppercase rounded transition-colors flex items-center justify-center text-center leading-tight ${activeFilter === filter ? 'bg-blue-600 text-white' : 'bg-[#1A1A1A] text-gray-400 border border-white/5 hover:bg-white/10'}`}
-                    >
-                      {filter}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Grid */}
-                <div className="grid grid-cols-2 gap-3 overflow-y-auto pb-4 pr-1 no-scrollbar">
+                <div className="flex-1 overflow-y-auto pr-1 space-y-4 no-scrollbar">
                   {([
-                    { type: 'bars', name: 'Linear Bars', category: 'spectrum', label: 'SPECTRUM' },
-                    { type: 'smooth_curve', name: 'Smooth Curve', category: 'spectrum', label: 'SPECTRUM' },
-                    { type: 'symmetrical_mirror', name: 'Symmetrical Mirror', category: 'spectrum', label: 'SPECTRUM' },
-                    { type: 'waveform', name: 'Waveform', category: 'spectrum', label: 'SPECTRUM' },
-                    { type: 'mirrored_bars', name: 'Mirrored Bars', category: 'spectrum', label: 'SPECTRUM' },
-                    { type: 'circle', name: 'Radial Circle', category: 'circular', label: 'CIRCULAR' },
-                    { type: 'double_circle', name: 'Double Circle Ring', category: 'circular', label: 'CIRCULAR' },
-                    { type: 'circular_spectrum', name: 'Circular Spectrum', category: 'circular', label: 'CIRCULAR' },
-                    { type: 'radial_dots', name: 'Dotted Circular', category: 'circular', label: 'CIRCULAR' },
-                    { type: 'bass_pulse', name: 'Bass Pulse Rings', category: 'circular', label: 'CIRCULAR' },
-                    { type: 'triangle_spectrum', name: 'Triangle Spectrum', category: 'shapes', label: 'SHAPE' },
-                    { type: 'diamond_spectrum', name: 'Diamond Spectrum', category: 'shapes', label: 'SHAPE' },
-                    { type: 'glowing_blocks', name: 'Glowing Blocks', category: 'shapes', label: 'SHAPE' },
-                    { type: 'perspective_ring', name: '3D Perspective Ring', category: 'circular', label: 'CIRCULAR' },
-                    { type: 'water_splash', name: 'Water Splash Burst', category: 'particles', label: 'PARTICLES' },
-                    { type: 'progress_bar', name: 'Progress Bar', category: 'basic', label: 'BASIC' },
-                    { type: 'glowing_ring', name: 'Glowing Ring', category: 'glow', label: 'GLOW' },
-                    { type: 'neon_grid', name: 'Neon Synthwave', category: 'cyber', label: 'CYBER' },
-                    { type: 'digital_matrix_rain', name: 'Digital Matrix Rain', category: 'cyber', label: 'CYBER' },
-                    { type: 'orbs', name: 'Frequency Orbs', category: 'cyber', label: 'ORBS & GLOW' },
-                    { type: 'particles', name: 'Particle Explosion', category: 'particles', label: 'PARTICLES' },
-                    { type: 'spiral_galaxy', name: 'Spiral Galaxy', category: 'particles', label: 'PARTICLES' },
-                    { type: 'multi_sine', name: 'Multi Sine Waves', category: 'waves', label: 'WAVES' },
-                    { type: 'single_sine', name: 'Single Sine Wave', category: 'waves', label: 'WAVES' },
-                    { type: 'hanging_text' as any, name: 'Hanging Text', category: 'elements', label: 'TEXT' },
-                    { type: 'line_glow' as any, name: 'Straight Line', category: 'waves', label: 'WAVES' },
-                    { type: 'flames', name: 'Flames Column', category: 'elements', label: 'ELEMENTS' },
-                    { type: 'rain', name: 'Rain Ripples', category: 'elements', label: 'ELEMENTS' },
-                    { type: 'color_pixel', name: 'Color Pixel', category: 'elements', label: 'ELEMENTS' },
-                  ] as const)
-                    .filter(item => (activeFilter === 'all' || item.category === activeFilter) && item.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .map(item => (
-                      <button 
-                        key={item.type}
-                        onClick={() => addElement(item.type)} 
-                        className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500/50 rounded-xl text-left transition-colors flex flex-col gap-1.5 min-h-[70px] justify-center"
-                      >
-                        <span className="text-xs font-bold text-gray-200">{item.name}</span>
-                        <span className="text-[9px] text-gray-500 uppercase tracking-widest">{item.label}</span>
-                      </button>
-                    ))}
+                    { id: 'spectrum', name: 'AUDIO SPECTRUM' },
+                    { id: 'circular', name: 'CIRCULAR ELEMENTS' },
+                    { id: 'waves', name: 'WAVEFORMS & LINES' },
+                    { id: 'cyber', name: 'CYBERPUNK & GLOW' },
+                    { id: 'particles', name: 'PARTICLES & SHAPES' },
+                    { id: 'text_banner', name: 'TEXT & BANNER' }
+                  ]).map(category => {
+                    
+                    const items = ([
+                      // spectrum
+                      { type: 'bars', name: 'Linear Bars', category: 'spectrum', label: 'SPECTRUM' },
+                      { type: 'smooth_curve', name: 'Smooth Curve', category: 'spectrum', label: 'SPECTRUM' },
+                      { type: 'symmetrical_mirror', name: 'Symmetrical Mirror', category: 'spectrum', label: 'SPECTRUM' },
+                      { type: 'waveform', name: 'Waveform', category: 'spectrum', label: 'SPECTRUM' },
+                      { type: 'mirrored_bars', name: 'Mirrored Bars', category: 'spectrum', label: 'SPECTRUM' },
+                      
+                      // circular
+                      { type: 'circle', name: 'Radial Circle', category: 'circular', label: 'CIRCULAR' },
+                      { type: 'double_circle', name: 'Double Circle Ring', category: 'circular', label: 'CIRCULAR' },
+                      { type: 'circular_spectrum', name: 'Circular Spectrum', category: 'circular', label: 'CIRCULAR' },
+                      { type: 'radial_dots', name: 'Dotted Circular', category: 'circular', label: 'CIRCULAR' },
+                      { type: 'bass_pulse', name: 'Bass Pulse Rings', category: 'circular', label: 'CIRCULAR' },
+                      { type: 'perspective_ring', name: '3D Perspective Ring', category: 'circular', label: 'CIRCULAR' },
+                      
+                      // waves
+                      { type: 'multi_sine', name: 'Multi Sine Waves', category: 'waves', label: 'WAVES' },
+                      { type: 'single_sine', name: 'Single Sine Wave', category: 'waves', label: 'WAVES' },
+                      { type: 'line_glow', name: 'Straight Line', category: 'waves', label: 'WAVES' },
+                      
+                      // cyber
+                      { type: 'glowing_ring', name: 'Glowing Ring', category: 'cyber', label: 'GLOW' },
+                      { type: 'neon_grid', name: 'Neon Synthwave', category: 'cyber', label: 'CYBER' },
+                      { type: 'digital_matrix_rain', name: 'Digital Matrix Rain', category: 'cyber', label: 'CYBER' },
+                      { type: 'orbs', name: 'Frequency Orbs', category: 'cyber', label: 'ORBS & GLOW' },
+                      
+                      // particles & shapes & elements
+                      { type: 'water_splash', name: 'Water Splash Burst', category: 'particles', label: 'PARTICLES' },
+                      { type: 'particles', name: 'Particle Explosion', category: 'particles', label: 'PARTICLES' },
+                      { type: 'spiral_galaxy', name: 'Spiral Galaxy', category: 'particles', label: 'PARTICLES' },
+                      { type: 'triangle_spectrum', name: 'Triangle Spectrum', category: 'particles', label: 'SHAPE' },
+                      { type: 'diamond_spectrum', name: 'Diamond Spectrum', category: 'particles', label: 'SHAPE' },
+                      { type: 'glowing_blocks', name: 'Glowing Blocks', category: 'particles', label: 'SHAPE' },
+                      { type: 'flames', name: 'Flames Column', category: 'particles', label: 'ELEMENTS' },
+                      { type: 'rain', name: 'Rain Ripples', category: 'particles', label: 'ELEMENTS' },
+                      { type: 'color_pixel', name: 'Color Pixel', category: 'particles', label: 'ELEMENTS' },
+                      { type: 'progress_bar', name: 'Progress Bar', category: 'particles', label: 'BASIC' },
+                      
+                      // text_banner
+                      { type: 'banner', name: 'Text Banner', category: 'text_banner', label: 'BANNER' },
+                      { type: 'hanging_text', name: 'Hanging Text', category: 'text_banner', label: 'TEXT' },
+                    ] as const).filter(item => item.category === category.id && item.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+                    if (items.length === 0) return null;
+
+                    return (
+                      <div key={category.id} className="border-b border-white/5 pb-4 last:border-0">
+                        <button 
+                          onClick={() => setOpenVizAccordion(openVizAccordion === category.id ? '' : category.id)} 
+                          className="w-full flex items-center justify-between group outline-none"
+                        >
+                          <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2 mb-3 group-hover:text-gray-300 transition-colors">
+                            <Settings size={12} /> {category.name}
+                          </h3>
+                          <ChevronDown size={14} className={`text-gray-500 mb-3 transition-transform ${openVizAccordion === category.id ? 'rotate-180' : ''}`} />
+                        </button>
+                        
+                        {openVizAccordion === category.id && (
+                          <div className="grid grid-cols-2 gap-3 mt-1">
+                            {items.map(item => (
+                              <button 
+                                key={item.type}
+                                onClick={() => addElement(item.type as any)} 
+                                className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500/50 rounded-xl text-left transition-colors flex flex-col gap-1.5 min-h-[70px] justify-center"
+                              >
+                                <span className="text-xs font-bold text-gray-200">{item.name}</span>
+                                <span className="text-[9px] text-gray-500 uppercase tracking-widest">{item.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
