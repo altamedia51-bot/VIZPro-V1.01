@@ -26,6 +26,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
   const bgImageRef = useRef<HTMLImageElement | null>(null);
   const bgVideoRef = useRef<HTMLVideoElement | null>(null);
   const imageCacheRef = useRef<Record<string, HTMLImageElement>>({});
+  const tintCacheRef = useRef<Record<string, HTMLCanvasElement>>({});
   const snapLinesRef = useRef<{ axis: 'x' | 'y', pos: number }[]>([]);
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -447,7 +448,26 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                 ctx.scale(el.scale, el.scale);
                 ctx.globalAlpha = el.opacity;
                 
-                ctx.drawImage(img, -imgEl.width / 2, -imgEl.height / 2, imgEl.width, imgEl.height);
+                if (imgEl.useColorTint) {
+                    const tintKey = imgEl.src + '_' + (imgEl.color || '#ffffff') + '_' + imgEl.width + '_' + imgEl.height;
+                    let tintedCanvas = tintCacheRef.current[tintKey];
+                    if (!tintedCanvas) {
+                        tintedCanvas = document.createElement('canvas');
+                        tintedCanvas.width = imgEl.width;
+                        tintedCanvas.height = imgEl.height;
+                        const offCtx = tintedCanvas.getContext('2d');
+                        if (offCtx) {
+                            offCtx.drawImage(img, 0, 0, imgEl.width, imgEl.height);
+                            offCtx.globalCompositeOperation = 'source-in';
+                            offCtx.fillStyle = imgEl.color || '#ffffff';
+                            offCtx.fillRect(0, 0, imgEl.width, imgEl.height);
+                        }
+                        tintCacheRef.current[tintKey] = tintedCanvas;
+                    }
+                    ctx.drawImage(tintedCanvas, -imgEl.width / 2, -imgEl.height / 2);
+                } else {
+                    ctx.drawImage(img, -imgEl.width / 2, -imgEl.height / 2, imgEl.width, imgEl.height);
+                }
                 
                 if (!isRecording && selectedElementId === el.id) {
                    ctx.strokeStyle = '#3b82f6';

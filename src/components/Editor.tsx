@@ -1584,6 +1584,31 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                   </div>
                 )}
 
+                {/* Image Tint Properties */}
+                {el.type === 'image' && (
+                  <div className="space-y-4 pt-4 border-t border-white/5">
+                    <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2">
+                      <Settings size={12} /> Properti Warna Gambar
+                    </h3>
+                    <div className="flex items-center gap-2 mt-2 mb-2">
+                      <input 
+                        type="checkbox" 
+                        id={`colortint-${el.id}`}
+                        checked={(el as any).useColorTint || false} 
+                        onChange={e => updateElement(el.id, { useColorTint: e.target.checked })}
+                        className="rounded bg-black/50 border-white/10 text-indigo-500"
+                      />
+                      <label htmlFor={`colortint-${el.id}`} className="text-[10px] text-gray-400 cursor-pointer">Timpa dengan Warna Solid (Tint)</label>
+                    </div>
+                    {(el as any).useColorTint && (
+                      <label className="block mt-2">
+                        <span className="text-[10px] text-gray-500 mb-2 block">Warna Tint</span>
+                        <input type="color" value={el.color || '#ffffff'} onChange={e => updateElement(el.id, { color: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                      </label>
+                    )}
+                  </div>
+                )}
+
                 {/* Specific Properties */}
                 {el.type !== 'image' && (
                 <div className="space-y-4 pt-4 border-t border-white/5">
