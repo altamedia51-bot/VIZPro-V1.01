@@ -224,6 +224,15 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
       newEl.text = 'New Text';
       newEl.fontSize = 60;
       newEl.fontFamily = 'Arial';
+    } else if (type === 'sticker_text') {
+      newEl.text = 'Happy Birthday';
+      newEl.fontSize = 120;
+      newEl.fontFamily = 'Brush Script MT, cursive';
+      newEl.color = '#ff0000';
+      newEl.color2 = '#ff8888';
+      newEl.useGradient = true;
+      newEl.strokeColor1 = '#ffffff';
+      newEl.lineWidth = 15;
     } else if (type === 'banner') {
       newEl.width = 600;
       newEl.height = 100;
@@ -795,16 +804,17 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                   <button onClick={() => addElement('text')} className="w-full p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center transition-colors text-white font-bold text-sm">
                     + TEKS BARU
                   </button>
+                  
                 </div>
 
                 <div className="flex-1 overflow-y-auto pr-1">
-                  {selectedElementId && (project.elements.find(e => e.id === selectedElementId)?.type === 'text' || project.elements.find(e => e.id === selectedElementId)?.type === 'subtitle' || project.elements.find(e => e.id === selectedElementId)?.type === 'banner' || project.elements.find(e => e.id === selectedElementId)?.type === 'bracket_banner') ? (
+                  {selectedElementId && (project.elements.find(e => e.id === selectedElementId)?.type === 'text' || project.elements.find(e => e.id === selectedElementId)?.type === 'subtitle' || project.elements.find(e => e.id === selectedElementId)?.type === 'banner' || project.elements.find(e => e.id === selectedElementId)?.type === 'bracket_banner' || project.elements.find(e => e.id === selectedElementId)?.type === 'sticker_text') ? (
                     (() => {
                       const el = project.elements.find(e => e.id === selectedElementId) as any;
                       const isSubtitle = el.type === 'subtitle';
                       const isBanner = el.type === 'banner';
                       const isBracketBanner = el.type === 'bracket_banner';
-                      const isText = el.type === 'text' || el.type === 'bracket_banner';
+                      const isText = el.type === 'text' || el.type === 'bracket_banner' || el.type === 'sticker_text';
                       return (
                         <div className="space-y-4">
                           <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2">
@@ -1517,6 +1527,9 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                           <button onClick={() => updateElement(el.id, { templateStyle: 'layered_outline', color: '#E87D2A' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
                             <span className="text-white font-bold text-xs" style={{ WebkitTextStroke: '2px black', paintOrder: 'stroke fill', filter: 'drop-shadow(4px 4px 0px #E87D2A)' }}>RETRO</span>
                           </button>
+                          <button onClick={() => updateElement(el.id, { templateStyle: 'calli', color: '#015B28' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
+                            <span className="text-[#015B28] font-bold text-xs" style={{ WebkitTextStroke: '1px white', paintOrder: 'stroke fill', filter: 'drop-shadow(3px 3px 0px #013B18)' }}>CALLI</span>
+                          </button>
                           <button onClick={() => updateElement(el.id, { templateStyle: 'bubble_yellow', color: '#000000' })} className="p-3 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center min-h-[60px]">
                             <span className="bg-[#FFD700] text-black px-2 py-1 rounded font-bold text-xs">BUBBLE</span>
                           </button>
@@ -1615,10 +1628,34 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                   <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2">
                     <Settings size={12} /> Properti Visualizer ({el.type})
                   </h3>
-                  <label className="block">
+                  <div className="block">
                     <span className="text-[10px] text-gray-500 mb-2 block">Warna Utama</span>
-                    <input type="color" value={el.color || '#ffffff'} onChange={e => updateElement(el.id, { color: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
-                  </label>
+                    <div className="flex flex-wrap gap-1">
+                      <label className="relative w-6 h-6 rounded flex items-center justify-center cursor-pointer border border-white/20 hover:border-white/50 bg-[#2a2a2a] overflow-hidden">
+                        <span className="text-white text-xs font-bold leading-none">+</span>
+                        <input 
+                          type="color" 
+                          value={el.color || '#ffffff'} 
+                          onChange={e => updateElement(el.id, { color: e.target.value })} 
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" 
+                        />
+                      </label>
+                      {[
+                        '#ffffff', '#ff0000', '#00ff00', '#0000ff', '#ffff00', 
+                        '#ff00ff', '#00ffff', '#000000', '#808080', '#ffa500', 
+                        '#800080', '#008000', '#000080', '#800000', '#008080',
+                        '#ffc0cb', '#a52a2a', '#ffd700', '#4b0082', '#ff4500'
+                      ].map((color) => (
+                        <button
+                          key={color}
+                          onClick={() => updateElement(el.id, { color })}
+                          className="w-6 h-6 rounded border border-white/10 hover:border-white/50 transition-colors"
+                          style={{ backgroundColor: color }}
+                          title={color}
+                        />
+                      ))}
+                    </div>
+                  </div>
                   
                   <div className="flex items-center gap-2 mt-2 mb-2">
                     <input 

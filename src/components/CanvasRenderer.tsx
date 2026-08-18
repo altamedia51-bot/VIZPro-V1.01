@@ -101,9 +101,12 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
         const w = (el as any).width * elScale;
         const h = (el as any).height * elScale;
         hit = x >= el.x - w / 2 && x <= el.x + w / 2 && y >= el.y - h / 2 && y <= el.y + h / 2;
-      } else if ((el.type === 'text' || el.type === 'subtitle') && ctx) {
+      } else if ((el.type === 'text' || el.type === 'subtitle' || el.type === 'sticker_text') && ctx) {
         ctx.font = `${el.fontSize}px ${el.fontFamily}`;
-        const textToMeasure = el.type === 'text' ? el.text : 'Subtitle Text';
+        const textToMeasure = el.text || 'Subtitle Text';
+        if (el.type === 'sticker_text') {
+            console.log("Sticker Text hit check", textToMeasure);
+        }
         const metrics = ctx.measureText(textToMeasure);
         const width = metrics.width * elScale;
         const height = el.fontSize * elScale;
@@ -478,7 +481,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                 ctx.restore();
               }
           }
-          else if (el.type === 'text' || el.type === 'subtitle') {
+          else if (el.type === 'text' || el.type === 'subtitle' || el.type === 'sticker_text') {
             const time = performance.now();
             let finalY = el.y;
             let finalScale = 1;
@@ -487,8 +490,8 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
             let textToRender = '';
             let activeSub: any = null;
             const currentT = currentTimeRef.current;
-            if (el.type === 'text') {
-              textToRender = el.text;
+            if (el.type === 'text' || el.type === 'sticker_text') {
+              textToRender = el.text || '';
               if (el.animation === 'glow_pulse') {
                 const pulse = Math.sin(time * 0.003) * 0.5 + 0.5;
                 ctx.shadowBlur = 10 + pulse * 20;
@@ -595,6 +598,33 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
               const lines = textToRender.split('\n');
               const lineHeight = el.fontSize * 1.2;
               const startY = -(lines.length - 1) * lineHeight / 2;
+              
+              if (el.type === 'sticker_text') {
+                 // console.log("Drawing sticker text", textToRender);
+                 ctx.lineJoin = 'round';
+                 ctx.miterLimit = 2;
+                 ctx.strokeStyle = el.strokeColor1 || '#ffffff';
+                 ctx.lineWidth = el.lineWidth || 15;
+                 
+                 // Add 3D Drop Shadow effect for sticker
+                 ctx.shadowColor = 'rgba(0,0,0,0.4)';
+                 ctx.shadowBlur = 10;
+                 ctx.shadowOffsetX = 4;
+                 ctx.shadowOffsetY = 6;
+                 
+                 lines.forEach((line, index) => {
+                    const y = startY + index * lineHeight;
+                    ctx.strokeText(line, 0, y);
+                 });
+                 
+                 // Remove shadow for fill
+                 ctx.shadowColor = 'transparent';
+                 ctx.shadowBlur = 0;
+                 ctx.shadowOffsetX = 0;
+                 ctx.shadowOffsetY = 0;
+              }
+               
+               
               const paddingX = 20;
               const paddingY = 10;
               
@@ -702,6 +732,28 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   ctx.fillStyle = '#FFFFFF';
                   ctx.fillText(line, 0, lineY);
                   ctx.fillText(line, 0, lineY); // double fill for stronger neon
+                } else if (el.templateStyle === 'calli') {
+                  const strokeWidth = Math.max(2, el.fontSize * 0.05); // Thin white stroke
+                  const offset = el.fontSize * 0.08;
+                  const fillColor = el.color || '#015B28'; // Pakistan Green
+                  const shadowColor = '#013B18'; // Darker green shadow
+                  
+                  ctx.lineJoin = 'round';
+                  ctx.miterLimit = 2;
+                  
+                  // Bottom Shadow Layer (Solid block, slightly offset)
+                  ctx.lineWidth = strokeWidth;
+                  ctx.strokeStyle = shadowColor;
+                  ctx.strokeText(line, offset, lineY + offset);
+                  ctx.fillStyle = shadowColor;
+                  ctx.fillText(line, offset, lineY + offset);
+                  
+                  // Top Layer (Green Fill with White Stroke)
+                  ctx.lineWidth = strokeWidth;
+                  ctx.strokeStyle = '#FFFFFF';
+                  ctx.strokeText(line, 0, lineY);
+                  ctx.fillStyle = fillColor;
+                  ctx.fillText(line, 0, lineY);
                 } else if (el.templateStyle === 'layered_outline') {
                   const strokeWidth = el.fontSize * 0.12;
                   const offset = el.fontSize * 0.08;
@@ -1178,6 +1230,17 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                     startX += wordWidth + spaceWidth;
                   });
                   ctx.textAlign = 'center'; // restore
+                } else if (el.type === 'sticker_text') {
+                  if (el.useGradient && el.color2) {
+                     // Create vertical gradient matching the text bounds
+                     const grad = ctx.createLinearGradient(0, lineY - el.fontSize/2, 0, lineY + el.fontSize/2);
+                     grad.addColorStop(0, el.color || '#ff0000');
+                     grad.addColorStop(1, el.color2 || '#ff8888');
+                     ctx.fillStyle = grad;
+                  } else {
+                     ctx.fillStyle = el.color || '#FFFFFF';
+                  }
+                  ctx.fillText(line, 0, lineY);
                 } else {
                   // Default
                   ctx.fillStyle = getStyle(el, -width/2, lineY, width/2, lineY);
