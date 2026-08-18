@@ -96,6 +96,10 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
         const totalW = e.columns * e.blockWidth + Math.max(0, e.columns - 1) * e.spacing;
         const totalH = e.rows * e.blockHeight + Math.max(0, e.rows - 1) * e.spacing;
         hit = Math.abs(x - el.x) <= (totalW * elScale) / 2 && Math.abs(y - el.y) <= (totalH * elScale) / 2;
+      } else if (el.type === 'banner') {
+        const w = el.width * elScale;
+        const h = el.height * elScale;
+        hit = x >= el.x - w / 2 && x <= el.x + w / 2 && y >= el.y - h / 2 && y <= el.y + h / 2;
       } else if ((el.type === 'text' || el.type === 'subtitle') && ctx) {
         ctx.font = `${el.fontSize}px ${el.fontFamily}`;
         const textToMeasure = el.type === 'text' ? el.text : 'Subtitle Text';
@@ -807,6 +811,163 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   ctx.lineWidth = Math.max(1, el.fontSize / 40);
                   ctx.strokeStyle = 'rgba(0,0,0,0.8)';
                   ctx.strokeText(line, 0, lineY);
+                } else if (el.templateStyle === 'sports_split') {
+                  // The font needs to be italic and bold
+                  ctx.font = `italic bold ${el.fontSize}px ${el.fontFamily}`;
+                  
+                  // Split the line into two parts using explicit properties, fallback to line splitting
+                  let firstWord = el.textLeft;
+                  let secondWord = el.textRight;
+                  
+                  // If explicit properties don't exist yet, fallback to splitting the line
+                  if (firstWord === undefined) {
+                    const words = line.split(' ');
+                    firstWord = words[0] || '';
+                    secondWord = words.slice(1).join(' ') || '';
+                  }
+                  
+                  // Apply textCase manually since we bypass normal textToRender for these two words
+                  if (el.textCase === 'uppercase') {
+                    firstWord = firstWord?.toUpperCase() || '';
+                    secondWord = secondWord?.toUpperCase() || '';
+                  } else if (el.textCase === 'lowercase') {
+                    firstWord = firstWord?.toLowerCase() || '';
+                    secondWord = secondWord?.toLowerCase() || '';
+                  }
+                  
+                  // Measure text to calculate bounding boxes
+                  const firstWordWidth = ctx.measureText(firstWord || '').width;
+                  const spaceWidth = ctx.measureText(' ').width;
+                  const secondWordWidth = ctx.measureText(secondWord || '').width;
+                  
+                  const paddingX = el.fontSize * 0.4;
+                  
+                  // Slant amount for the parallelogram
+                  const slant = el.fontSize * 0.25;
+                  
+                  const totalWidth = firstWordWidth + (secondWord ? spaceWidth + secondWordWidth : 0);
+                  const startX = -totalWidth / 2;
+                  
+                  // Height calculations
+                  const boxTop = lineY - el.fontSize * 0.9;
+                  const boxBottom = lineY + el.fontSize * 0.15;
+                  
+                  // Calculate exact cutoff point between left box and right box
+                  // Since the font is italic, the text inherently leans right.
+                  // We need to shift the cutoff point to the right so it doesn't clip the first word.
+                  const italicOffset = el.fontSize * 0.15; 
+                  
+                  // Shift the entire text rendering block RIGHT slightly so it doesn't hit the left slant
+                  const textStartX = startX + paddingX * 0.5;
+                  
+                  const boxSplitX_bottom = textStartX + firstWordWidth + (secondWord ? spaceWidth * 0.8 : paddingX) + italicOffset;
+                  const boxSplitX_top = boxSplitX_bottom + slant;
+
+                  // Make the left box slightly wider to accommodate the right shift
+                  const black_bl_x = startX - paddingX * 1.2;
+                  const black_bl_y = boxBottom;
+                  const black_tl_x = black_bl_x + slant;
+                  const black_tl_y = boxTop;
+                  const black_br_x = boxSplitX_bottom;
+                  const black_br_y = boxBottom;
+                  const black_tr_x = boxSplitX_top;
+                  const black_tr_y = boxTop;
+
+                  const blue_bl_x = boxSplitX_bottom;
+                  const blue_bl_y = boxBottom;
+                  const blue_tl_x = boxSplitX_top;
+                  const blue_tl_y = boxTop;
+                  const blue_br_x = startX + totalWidth + paddingX;
+                  const blue_br_y = boxBottom;
+                  const blue_tr_x = blue_br_x + slant;
+                  const blue_tr_y = boxTop;
+                  
+                  // Apply shadow to entire banner boxes
+                  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                  ctx.shadowBlur = 10;
+                  ctx.shadowOffsetX = 8;
+                  ctx.shadowOffsetY = 8;
+                  
+                  if (secondWord) {
+                    // Draw Right Box (Blue)
+                    ctx.beginPath();
+                    ctx.moveTo(blue_tl_x, blue_tl_y);
+                    ctx.lineTo(blue_tr_x, blue_tr_y);
+                    ctx.lineTo(blue_br_x, blue_br_y);
+                    ctx.lineTo(blue_bl_x, blue_bl_y);
+                    ctx.closePath();
+                    
+                    const blueGrad = ctx.createLinearGradient(0, boxTop, 0, boxBottom);
+                    // Lighten the user's base color slightly for the top gradient stop
+                    blueGrad.addColorStop(0, el.boxColor2 || '#247abf');
+                    blueGrad.addColorStop(1, el.boxColor2 || '#247abf'); 
+                    ctx.fillStyle = blueGrad;
+                    ctx.fill();
+                  }
+
+                  // Draw Left Box (Black)
+                  ctx.beginPath();
+                  ctx.moveTo(black_tl_x, black_tl_y);
+                  ctx.lineTo(black_tr_x, black_tr_y);
+                  ctx.lineTo(black_br_x, black_br_y);
+                  ctx.lineTo(black_bl_x, black_bl_y);
+                  ctx.closePath();
+                  ctx.fillStyle = el.boxColor1 || '#171717';
+                  ctx.fill();
+                  
+                  // Reset shadow before stroking borders
+                  ctx.shadowColor = 'transparent';
+                  ctx.shadowBlur = 0;
+                  ctx.shadowOffsetX = 0;
+                  ctx.shadowOffsetY = 0;
+                  
+                  if (secondWord) {
+                    // Right Box Dark Border (Top, Right, Bottom)
+                    ctx.beginPath();
+                    ctx.moveTo(blue_tl_x, blue_tl_y);
+                    ctx.lineTo(blue_tr_x, blue_tr_y);
+                    ctx.lineTo(blue_br_x, blue_br_y);
+                    ctx.lineTo(blue_bl_x, blue_bl_y);
+                    ctx.strokeStyle = el.strokeColor2 || '#135185';
+                    ctx.lineWidth = Math.max(2, el.fontSize * 0.06);
+                    ctx.lineJoin = 'miter';
+                    ctx.stroke();
+                  }
+                  
+                  // Left Box Accent Border (Top, Left, Bottom)
+                  ctx.beginPath();
+                  ctx.moveTo(black_tr_x, black_tr_y);
+                  ctx.lineTo(black_tl_x, black_tl_y);
+                  ctx.lineTo(black_bl_x, black_bl_y);
+                  ctx.lineTo(black_br_x, black_br_y);
+                  ctx.strokeStyle = el.strokeColor1 || '#2bc299';
+                  ctx.lineWidth = Math.max(2, el.fontSize * 0.08);
+                  ctx.lineJoin = 'miter';
+                  ctx.stroke();
+
+                  // Setup Text Drawing
+                  ctx.textAlign = 'left';
+                  
+                  // Sharp, short drop shadow for the letters
+                  ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                  ctx.shadowBlur = 0; 
+                  ctx.shadowOffsetX = Math.max(1, el.fontSize * 0.04);
+                  ctx.shadowOffsetY = Math.max(1, el.fontSize * 0.04);
+                  
+                  // First Word (White)
+                  ctx.fillStyle = el.color || '#ffffff';
+                  ctx.fillText(firstWord || '', textStartX, lineY);
+                  
+                  // Second Word (Yellow)
+                  if (secondWord) {
+                    ctx.fillStyle = el.color2 || '#fdf646';
+                    // We also shift the second word slightly to the right to clear the slant
+                    ctx.fillText(secondWord, textStartX + firstWordWidth + spaceWidth * 1.5, lineY);
+                  }
+                  
+                  // Reset alignment to prevent messing up other elements
+                  ctx.textAlign = 'center';
+                  ctx.shadowColor = 'transparent';
                 } else if (el.templateStyle === 'colorful_words') {
                   const palette = ['#FFB3C6', '#FFD166', '#A0C4FF', '#FF9F1C'];
                   
@@ -1009,6 +1170,143 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
               ctx.shadowOffsetX = 0;
               ctx.shadowOffsetY = 0;
               ctx.letterSpacing = '0px';
+          }
+          else if (el.type === 'banner') {
+              ctx.save();
+              ctx.translate(el.x, el.y);
+              ctx.globalAlpha = el.opacity ?? 1;
+
+              const slant = el.slant ?? 25;
+              const w = el.width || 600;
+              const h = el.height || 100;
+              
+              const startX = -w / 2;
+              const boxTop = -h / 2;
+              const boxBottom = h / 2;
+
+              // Apply shadow to entire banner boxes
+              ctx.shadowColor = 'rgba(0,0,0,0.6)';
+              ctx.shadowBlur = 10;
+              ctx.shadowOffsetX = 8;
+              ctx.shadowOffsetY = 8;
+
+              // Calculate bounding boxes for left and right parts
+              // Let's divide it roughly equally, but the user can use spaces to move things around, or we can center it.
+              // We'll just split it down the middle exactly at `x = 0`.
+              const splitX_bottom = slant / 2;
+              const splitX_top = splitX_bottom + slant;
+              
+              const black_bl_x = startX;
+              const black_bl_y = boxBottom;
+              const black_tl_x = startX + slant;
+              const black_tl_y = boxTop;
+              const black_br_x = splitX_bottom;
+              const black_br_y = boxBottom;
+              const black_tr_x = splitX_top;
+              const black_tr_y = boxTop;
+              
+              const blue_bl_x = splitX_bottom;
+              const blue_bl_y = boxBottom;
+              const blue_tl_x = splitX_top;
+              const blue_tl_y = boxTop;
+              const blue_br_x = startX + w;
+              const blue_br_y = boxBottom;
+              const blue_tr_x = blue_br_x + slant;
+              const blue_tr_y = boxTop;
+
+              // Draw Right Box
+              ctx.beginPath();
+              ctx.moveTo(blue_tl_x, blue_tl_y);
+              ctx.lineTo(blue_tr_x, blue_tr_y);
+              ctx.lineTo(blue_br_x, blue_br_y);
+              ctx.lineTo(blue_bl_x, blue_bl_y);
+              ctx.closePath();
+              
+              const blueGrad = ctx.createLinearGradient(0, boxTop, 0, boxBottom);
+              blueGrad.addColorStop(0, el.boxColor2 || '#247abf');
+              blueGrad.addColorStop(1, el.boxColor2 || '#247abf');
+              ctx.fillStyle = blueGrad;
+              ctx.globalAlpha = (el.opacity ?? 1) * (el.boxOpacity2 ?? el.boxOpacity ?? 1);
+              ctx.fill();
+
+              // Draw Left Box
+              ctx.beginPath();
+              ctx.moveTo(black_tl_x, black_tl_y);
+              ctx.lineTo(black_tr_x, black_tr_y);
+              ctx.lineTo(black_br_x, black_br_y);
+              ctx.lineTo(black_bl_x, black_bl_y);
+              ctx.closePath();
+              ctx.fillStyle = el.boxColor1 || '#171717';
+              ctx.globalAlpha = (el.opacity ?? 1) * (el.boxOpacity1 ?? el.boxOpacity ?? 1);
+              ctx.fill();
+              
+              // Reset alpha for borders and text
+              ctx.globalAlpha = el.opacity ?? 1;
+
+              // Reset shadow before stroking borders
+              ctx.shadowColor = 'transparent';
+              ctx.shadowBlur = 0;
+              ctx.shadowOffsetX = 0;
+              ctx.shadowOffsetY = 0;
+
+              // Right Box Dark Border (Top, Right, Bottom)
+              ctx.beginPath();
+              ctx.moveTo(blue_tl_x, blue_tl_y);
+              ctx.lineTo(blue_tr_x, blue_tr_y);
+              ctx.lineTo(blue_br_x, blue_br_y);
+              ctx.lineTo(blue_bl_x, blue_bl_y);
+              ctx.strokeStyle = el.strokeColor2 || '#135185';
+              ctx.lineWidth = Math.max(2, h * 0.06);
+              ctx.lineJoin = 'miter';
+              ctx.stroke();
+
+              // Left Box Accent Border (Top, Left, Bottom)
+              ctx.beginPath();
+              ctx.moveTo(black_tr_x, black_tr_y);
+              ctx.lineTo(black_tl_x, black_tl_y);
+              ctx.lineTo(black_bl_x, black_bl_y);
+              ctx.lineTo(black_br_x, black_br_y);
+              ctx.strokeStyle = el.strokeColor1 || '#2bc299';
+              ctx.lineWidth = Math.max(2, h * 0.08);
+              ctx.lineJoin = 'miter';
+              ctx.stroke();
+
+              // Render Texts
+              let firstWord = el.textLeft || '';
+              let secondWord = el.textRight || '';
+              
+              if (el.textCase === 'uppercase') {
+                firstWord = firstWord.toUpperCase();
+                secondWord = secondWord.toUpperCase();
+              } else if (el.textCase === 'lowercase') {
+                firstWord = firstWord.toLowerCase();
+                secondWord = secondWord.toLowerCase();
+              }
+
+              // Font size auto-scales with height
+              const fontSize = h * 0.6;
+              ctx.font = `italic bold ${fontSize}px ${el.fontFamily || 'Oswald'}`;
+              ctx.textBaseline = 'middle';
+              
+              ctx.shadowColor = 'rgba(0,0,0,0.8)';
+              ctx.shadowBlur = 0;
+              ctx.shadowOffsetX = Math.max(1, fontSize * 0.04);
+              ctx.shadowOffsetY = Math.max(1, fontSize * 0.04);
+              
+              // Center in left box
+              // Left box center X is roughly (black_bl_x + black_tr_x) / 2
+              const leftCenterX = (black_bl_x + black_tr_x) / 2;
+              ctx.fillStyle = el.color || '#ffffff';
+              ctx.textAlign = 'center';
+              ctx.fillText(firstWord, leftCenterX, 0);
+
+              // Center in right box
+              const rightCenterX = (blue_bl_x + blue_tr_x) / 2;
+              ctx.fillStyle = el.color2 || '#fdf646';
+              ctx.textAlign = 'center';
+              ctx.fillText(secondWord, rightCenterX, 0);
+              
+              ctx.restore();
           }
           else if (el.type === 'waveform') {
              ctx.lineWidth = el.lineWidth;

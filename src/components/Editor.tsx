@@ -223,6 +223,22 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
       newEl.text = 'New Text';
       newEl.fontSize = 60;
       newEl.fontFamily = 'Arial';
+    } else if (type === 'banner') {
+      newEl.width = 600;
+      newEl.height = 100;
+      newEl.textLeft = 'Viz';
+      newEl.textRight = 'Pro';
+      newEl.fontFamily = 'Oswald';
+      newEl.color = '#ffffff';
+      newEl.color2 = '#fdf646';
+      newEl.boxColor1 = '#171717';
+      newEl.boxColor2 = '#247abf';
+      newEl.strokeColor1 = '#2bc299';
+      newEl.strokeColor2 = '#135185';
+      newEl.slant = 25;
+      newEl.boxOpacity1 = 1;
+      newEl.boxOpacity2 = 1;
+      newEl.textCase = 'uppercase';
     } else if (type as any === 'hanging_text') {
       newEl.type = 'text';
       newEl.text = 'VIZPRO';
@@ -762,22 +778,29 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
 
             {activeTab === 'text' && (
               <div className="flex flex-col h-full overflow-hidden p-4">
-                <button onClick={() => addElement('text')} className="w-full p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center transition-colors text-white font-bold text-sm mb-4">
-                  + TAMBAH LAYER TEKS BARU
-                </button>
+                <div className="flex gap-2 mb-4">
+                  <button onClick={() => addElement('text')} className="flex-1 p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center transition-colors text-white font-bold text-sm">
+                    + TEKS BARU
+                  </button>
+                  <button onClick={() => addElement('banner')} className="flex-1 p-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-center transition-colors text-white font-bold text-sm">
+                    + BANNER BARU
+                  </button>
+                </div>
 
                 <div className="flex-1 overflow-y-auto pr-1">
-                  {selectedElementId && (project.elements.find(e => e.id === selectedElementId)?.type === 'text' || project.elements.find(e => e.id === selectedElementId)?.type === 'subtitle') ? (
+                  {selectedElementId && (project.elements.find(e => e.id === selectedElementId)?.type === 'text' || project.elements.find(e => e.id === selectedElementId)?.type === 'subtitle' || project.elements.find(e => e.id === selectedElementId)?.type === 'banner') ? (
                     (() => {
                       const el = project.elements.find(e => e.id === selectedElementId) as any;
                       const isSubtitle = el.type === 'subtitle';
+                      const isBanner = el.type === 'banner';
+                      const isText = el.type === 'text';
                       return (
                         <div className="space-y-4">
                           <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2">
-                            <Type size={12} /> {isSubtitle ? "EDIT SUBTITLE LAYER" : "EDIT LAYER TEKS (TEXT LAYER)"}
+                            <Type size={12} /> {isSubtitle ? "EDIT SUBTITLE LAYER" : isBanner ? "EDIT BANNER LAYER" : "EDIT LAYER TEKS (TEXT LAYER)"}
                           </h3>
                           
-                          {!isSubtitle && (
+                          {isText && (
     <div>
       <label className="block text-[10px] text-gray-400 mb-1">Isi Teks</label>
       <input type="text" value={el.text || ''} onChange={e => updateElement(el.id, { text: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/5 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-blue-500/50" />
@@ -1537,7 +1560,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                     </label>
                   )}
                   
-                  {(el.type === 'text' || el.type === 'subtitle') && (
+                  {(el.type === 'text' || el.type === 'subtitle' || el.type === 'banner') && (
                     <>
                       {el.type === 'text' && (
                         <label className="block">
@@ -1546,12 +1569,98 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                         </label>
                       )}
                       
-                      <label className="block">
-                        <div className="flex justify-between mb-1">
-                          <span className="text-[10px] text-gray-500">Ukuran Font ({el.fontSize}px)</span>
+                      {el.type === 'banner' && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="block">
+                              <span className="text-[10px] text-gray-500 mb-1 block">Teks Kiri</span>
+                              <input type="text" value={el.textLeft ?? ''} onChange={e => updateElement(el.id, { textLeft: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors" />
+                            </label>
+                            <label className="block">
+                              <span className="text-[10px] text-gray-500 mb-1 block">Teks Kanan</span>
+                              <input type="text" value={el.textRight ?? ''} onChange={e => updateElement(el.id, { textRight: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors" />
+                            </label>
+                          </div>
+                          
+                          <label className="block">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-[10px] text-gray-500">Lebar ({el.width}px)</span>
+                            </div>
+                            <input type="range" min="200" max="1000" value={el.width || 600} onChange={e => updateElement(el.id, { width: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                          </label>
+                          
+                          <label className="block">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-[10px] text-gray-500">Tinggi ({el.height}px)</span>
+                            </div>
+                            <input type="range" min="50" max="300" value={el.height || 100} onChange={e => updateElement(el.id, { height: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                          </label>
+                          
+                          <label className="block">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-[10px] text-gray-500">Kemiringan / Slant ({el.slant}px)</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={el.slant || 25} onChange={e => updateElement(el.id, { slant: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                          </label>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="block">
+                              <div className="flex justify-between mb-1">
+                                <span className="text-[10px] text-gray-500">Opacity Kiri ({Math.round((el.boxOpacity1 ?? el.boxOpacity ?? 1) * 100)}%)</span>
+                              </div>
+                              <input type="range" min="0" max="1" step="0.05" value={el.boxOpacity1 ?? el.boxOpacity ?? 1} onChange={e => updateElement(el.id, { boxOpacity1: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                            </label>
+                            <label className="block">
+                              <div className="flex justify-between mb-1">
+                                <span className="text-[10px] text-gray-500">Opacity Kanan ({Math.round((el.boxOpacity2 ?? el.boxOpacity ?? 1) * 100)}%)</span>
+                              </div>
+                              <input type="range" min="0" max="1" step="0.05" value={el.boxOpacity2 ?? el.boxOpacity ?? 1} onChange={e => updateElement(el.id, { boxOpacity2: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                            </label>
+                          </div>
+
+                          <div className="p-3 bg-white/5 rounded-lg space-y-3">
+                            <span className="text-[10px] font-bold text-white uppercase block mb-2">Warna Banner</span>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <label className="block">
+                                <span className="text-[10px] text-gray-500 mb-1 block">Teks Kiri</span>
+                                <input type="color" value={el.color || '#ffffff'} onChange={e => updateElement(el.id, { color: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                              </label>
+                              <label className="block">
+                                <span className="text-[10px] text-gray-500 mb-1 block">Teks Kanan</span>
+                                <input type="color" value={el.color2 || '#ffff00'} onChange={e => updateElement(el.id, { color2: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                              </label>
+                              
+                              <label className="block">
+                                <span className="text-[10px] text-gray-500 mb-1 block">Box Kiri</span>
+                                <input type="color" value={el.boxColor1 || '#171717'} onChange={e => updateElement(el.id, { boxColor1: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                              </label>
+                              <label className="block">
+                                <span className="text-[10px] text-gray-500 mb-1 block">Box Kanan</span>
+                                <input type="color" value={el.boxColor2 || '#247abf'} onChange={e => updateElement(el.id, { boxColor2: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                              </label>
+
+                              <label className="block">
+                                <span className="text-[10px] text-gray-500 mb-1 block">Tepi Kiri</span>
+                                <input type="color" value={el.strokeColor1 || '#2bc299'} onChange={e => updateElement(el.id, { strokeColor1: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                              </label>
+                              <label className="block">
+                                <span className="text-[10px] text-gray-500 mb-1 block">Tepi Kanan</span>
+                                <input type="color" value={el.strokeColor2 || '#135185'} onChange={e => updateElement(el.id, { strokeColor2: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                              </label>
+                            </div>
+                          </div>
                         </div>
-                        <input type="range" min="10" max="200" value={el.fontSize || 16} onChange={e => updateElement(el.id, { fontSize: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
-                      </label>
+                      )}
+                      
+                      {(el.type === 'text' || el.type === 'subtitle') && (
+                        <label className="block">
+                          <div className="flex justify-between mb-1">
+                            <span className="text-[10px] text-gray-500">Ukuran Font ({el.fontSize}px)</span>
+                          </div>
+                          <input type="range" min="10" max="200" value={el.fontSize || 16} onChange={e => updateElement(el.id, { fontSize: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                        </label>
+                      )}
                       
                       {(el.type === 'text' || el.type === 'subtitle') && (el as any).isHanging && (
                         <label className="block mt-4 mb-4">

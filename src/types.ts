@@ -48,6 +48,7 @@ export type ElementType =
   | "bars"
   | "circle"
   | "text"
+  | "banner"
   | "waveform"
   | "particles"
   | "orbs"
@@ -134,6 +135,25 @@ export interface TextElement extends BaseElement {
   textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
   backgroundColor?: string;
   backgroundOpacity?: number;
+}
+export interface BannerElement extends BaseElement {
+  type: "banner";
+  width: number;
+  height: number;
+  textLeft: string;
+  textRight: string;
+  fontFamily: string;
+  color: string;
+  color2: string;
+  boxColor1: string;
+  boxColor2: string;
+  strokeColor1: string;
+  strokeColor2: string;
+  slant: number;
+  boxOpacity?: number;
+  boxOpacity1?: number;
+  boxOpacity2?: number;
+  textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
 }
 export interface WaveformElement extends BaseElement {
   type: "waveform";
@@ -322,6 +342,7 @@ export type VizElement =
   | CircleElement
   | TextElement
   | SubtitleElement
+  | BannerElement
   | WaveformElement
   | ParticlesElement
   | OrbsElement
