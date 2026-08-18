@@ -96,9 +96,9 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
         const totalW = e.columns * e.blockWidth + Math.max(0, e.columns - 1) * e.spacing;
         const totalH = e.rows * e.blockHeight + Math.max(0, e.rows - 1) * e.spacing;
         hit = Math.abs(x - el.x) <= (totalW * elScale) / 2 && Math.abs(y - el.y) <= (totalH * elScale) / 2;
-      } else if (el.type === 'banner') {
-        const w = el.width * elScale;
-        const h = el.height * elScale;
+      } else if (el.type === 'banner' || el.type === 'bracket_banner') {
+        const w = (el as any).width * elScale;
+        const h = (el as any).height * elScale;
         hit = x >= el.x - w / 2 && x <= el.x + w / 2 && y >= el.y - h / 2 && y <= el.y + h / 2;
       } else if ((el.type === 'text' || el.type === 'subtitle') && ctx) {
         ctx.font = `${el.fontSize}px ${el.fontFamily}`;
@@ -1307,6 +1307,125 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
               ctx.fillText(secondWord, rightCenterX, 0);
               
               ctx.restore();
+          }
+          else if (el.type === 'bracket_banner') {
+             ctx.save();
+             ctx.translate(el.x, el.y);
+             ctx.scale(el.scale, el.scale);
+             ctx.rotate(el.rotation * Math.PI / 180);
+
+             const w = el.width || 600;
+             const h = el.height || 100;
+             const radius = h / 2;
+             
+             // Shadow for the entire element
+             ctx.shadowColor = 'rgba(0,0,0,0.5)';
+             ctx.shadowBlur = 15;
+             ctx.shadowOffsetX = 0;
+             ctx.shadowOffsetY = 8;
+
+             // Main Pill shape
+             ctx.beginPath();
+             ctx.moveTo(-w/2 + radius, -radius);
+             ctx.lineTo(w/2 - radius, -radius);
+             ctx.arc(w/2 - radius, 0, radius, -Math.PI/2, Math.PI/2);
+             ctx.lineTo(-w/2 + radius, radius);
+             ctx.arc(-w/2 + radius, 0, radius, Math.PI/2, -Math.PI/2);
+             ctx.closePath();
+
+             // Gradient fill
+             const grad = ctx.createLinearGradient(0, -radius, 0, radius);
+             grad.addColorStop(0, el.boxColor1 || '#df001c');
+             grad.addColorStop(1, el.boxColor2 || '#9a0914');
+             ctx.fillStyle = grad;
+             ctx.globalAlpha = (el.opacity ?? 1) * (el.boxOpacity ?? 1);
+             ctx.fill();
+             
+             ctx.globalAlpha = el.opacity ?? 1;
+
+             // Remove shadow for borders
+             ctx.shadowColor = 'transparent';
+             ctx.shadowBlur = 0;
+             ctx.shadowOffsetX = 0;
+             ctx.shadowOffsetY = 0;
+
+             // Border
+             ctx.strokeStyle = el.strokeColor1 || '#ffffff';
+             ctx.lineWidth = Math.max(2, h * 0.04);
+             ctx.stroke();
+
+             // Brackets
+             const gap = h * 0.08;
+             const bracketWidth = h * 0.15;
+             const angle = Math.PI * 0.3;
+             const radiusInner = radius + gap;
+
+             // Right Bracket
+             let cx = w/2 - radius;
+             let startX = cx + radiusInner * Math.cos(-angle);
+             let startY = radiusInner * Math.sin(-angle);
+             let endX = cx + radiusInner * Math.cos(angle);
+             let endY = radiusInner * Math.sin(angle);
+             let midX = cx + radiusInner + bracketWidth;
+             let cpX = 2 * midX - (startX + endX) / 2;
+
+             ctx.beginPath();
+             ctx.arc(cx, 0, radiusInner, -angle, angle, false);
+             ctx.quadraticCurveTo(cpX, 0, startX, startY);
+             ctx.closePath();
+
+             const bracketGrad1 = ctx.createLinearGradient(0, -h/2, 0, h/2);
+             bracketGrad1.addColorStop(0, el.boxColor1 || '#df001c');
+             bracketGrad1.addColorStop(1, el.boxColor2 || '#9a0914');
+             ctx.fillStyle = bracketGrad1;
+             ctx.fill();
+             
+             ctx.strokeStyle = el.strokeColor1 || '#ffffff';
+             ctx.lineWidth = Math.max(1, h * 0.02);
+             ctx.stroke();
+
+             // Left Bracket
+             cx = -w/2 + radius;
+             startX = cx + radiusInner * Math.cos(Math.PI + angle);
+             startY = radiusInner * Math.sin(Math.PI + angle);
+             endX = cx + radiusInner * Math.cos(Math.PI - angle);
+             endY = radiusInner * Math.sin(Math.PI - angle);
+             midX = cx - radiusInner - bracketWidth;
+             cpX = 2 * midX - (startX + endX) / 2;
+
+             ctx.beginPath();
+             ctx.arc(cx, 0, radiusInner, Math.PI + angle, Math.PI - angle, true);
+             ctx.quadraticCurveTo(cpX, 0, startX, startY);
+             ctx.closePath();
+
+             const bracketGrad2 = ctx.createLinearGradient(0, -h/2, 0, h/2);
+             bracketGrad2.addColorStop(0, el.boxColor1 || '#df001c');
+             bracketGrad2.addColorStop(1, el.boxColor2 || '#9a0914');
+             ctx.fillStyle = bracketGrad2;
+             ctx.fill();
+             
+             ctx.strokeStyle = el.strokeColor2 || el.strokeColor1 || '#ffffff';
+             ctx.lineWidth = Math.max(1, h * 0.02);
+             ctx.stroke();
+
+             // Text
+             ctx.shadowColor = 'rgba(0,0,0,0.5)';
+             ctx.shadowBlur = 4;
+             ctx.shadowOffsetX = 2;
+             ctx.shadowOffsetY = 2;
+
+             let textStr = (el as any).text || '';
+             if (el.textCase === 'uppercase') textStr = textStr.toUpperCase();
+             else if (el.textCase === 'lowercase') textStr = textStr.toLowerCase();
+             
+             const fontSize = h * 0.5;
+             ctx.font = `bold ${fontSize}px ${el.fontFamily || 'Arial'}`;
+             ctx.textAlign = 'center';
+             ctx.textBaseline = 'middle';
+             ctx.fillStyle = el.color || '#ffffff';
+             ctx.fillText(textStr, 0, 0);
+
+             ctx.restore();
           }
           else if (el.type === 'waveform') {
              ctx.lineWidth = el.lineWidth;

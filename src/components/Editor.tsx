@@ -240,6 +240,18 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
       newEl.boxOpacity1 = 1;
       newEl.boxOpacity2 = 1;
       newEl.textCase = 'uppercase';
+    } else if (type === 'bracket_banner') {
+      newEl.width = 600;
+      newEl.height = 100;
+      newEl.text = 'Bracket Banner';
+      newEl.fontFamily = 'Oswald';
+      newEl.color = '#ffffff';
+      newEl.boxColor1 = '#df001c';
+      newEl.boxColor2 = '#9a0914';
+      newEl.strokeColor1 = '#ffffff';
+      newEl.strokeColor2 = '#cccccc';
+      newEl.boxOpacity = 1;
+      newEl.textCase = 'uppercase';
     } else if (type as any === 'hanging_text') {
       newEl.type = 'text';
       newEl.text = 'VIZPRO';
@@ -786,22 +798,35 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                 </div>
 
                 <div className="flex-1 overflow-y-auto pr-1">
-                  {selectedElementId && (project.elements.find(e => e.id === selectedElementId)?.type === 'text' || project.elements.find(e => e.id === selectedElementId)?.type === 'subtitle' || project.elements.find(e => e.id === selectedElementId)?.type === 'banner') ? (
+                  {selectedElementId && (project.elements.find(e => e.id === selectedElementId)?.type === 'text' || project.elements.find(e => e.id === selectedElementId)?.type === 'subtitle' || project.elements.find(e => e.id === selectedElementId)?.type === 'banner' || project.elements.find(e => e.id === selectedElementId)?.type === 'bracket_banner') ? (
                     (() => {
                       const el = project.elements.find(e => e.id === selectedElementId) as any;
                       const isSubtitle = el.type === 'subtitle';
                       const isBanner = el.type === 'banner';
-                      const isText = el.type === 'text';
+                      const isBracketBanner = el.type === 'bracket_banner';
+                      const isText = el.type === 'text' || el.type === 'bracket_banner';
                       return (
                         <div className="space-y-4">
                           <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2">
-                            <Type size={12} /> {isSubtitle ? "EDIT SUBTITLE LAYER" : isBanner ? "EDIT BANNER LAYER" : "EDIT LAYER TEKS (TEXT LAYER)"}
+                            <Type size={12} /> {isSubtitle ? "EDIT SUBTITLE LAYER" : isBanner ? "EDIT BANNER LAYER" : isBracketBanner ? "EDIT BRACKET BANNER" : "EDIT LAYER TEKS (TEXT LAYER)"}
                           </h3>
                           
                           {isText && (
     <div>
       <label className="block text-[10px] text-gray-400 mb-1">Isi Teks</label>
       <input type="text" value={el.text || ''} onChange={e => updateElement(el.id, { text: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/5 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-blue-500/50" />
+    </div>
+  )}
+  {isBanner && !isBracketBanner && (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-[10px] text-gray-400 mb-1">Teks Kiri</label>
+        <input type="text" value={el.textLeft || ''} onChange={e => updateElement(el.id, { textLeft: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/5 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-blue-500/50" />
+      </div>
+      <div>
+        <label className="block text-[10px] text-gray-400 mb-1">Teks Kanan</label>
+        <input type="text" value={el.textRight || ''} onChange={e => updateElement(el.id, { textRight: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/5 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-blue-500/50" />
+      </div>
     </div>
   )}
   {isSubtitle && (
@@ -1304,6 +1329,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                       
                       // text_banner
                       { type: 'banner', name: 'Text Banner', category: 'text_banner', label: 'BANNER' },
+                      { type: 'bracket_banner', name: 'Bracket Banner', category: 'text_banner', label: 'BANNER' },
                       { type: 'hanging_text', name: 'Hanging Text', category: 'text_banner', label: 'TEXT' },
                     ] as const).filter(item => item.category === category.id && item.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -1587,7 +1613,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                     </label>
                   )}
                   
-                  {(el.type === 'text' || el.type === 'subtitle' || el.type === 'banner') && (
+                  {(el.type === 'text' || el.type === 'subtitle' || el.type === 'banner' || el.type === 'bracket_banner') && (
                     <>
                       {el.type === 'text' && (
                         <label className="block">
@@ -1674,6 +1700,76 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                               <label className="block">
                                 <span className="text-[10px] text-gray-500 mb-1 block">Tepi Kanan</span>
                                 <input type="color" value={el.strokeColor2 || '#135185'} onChange={e => updateElement(el.id, { strokeColor2: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {el.type === 'bracket_banner' && (
+                        <div className="space-y-4">
+                          <label className="block">
+                            <span className="text-[10px] text-gray-500 mb-1 block">Teks Banner</span>
+                            <input type="text" value={el.text || ''} onChange={e => updateElement(el.id, { text: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded px-3 py-2 text-sm text-white" />
+                          </label>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="block">
+                              <span className="text-[10px] text-gray-500 mb-1 block">Font</span>
+                              <select value={el.fontFamily || 'Arial'} onChange={e => updateElement(el.id, { fontFamily: e.target.value })} className="w-full bg-[#1A1A1A] border border-white/10 rounded px-2 py-1.5 text-xs text-white">
+                                {['Arial', 'Oswald', 'Impact', 'Verdana', 'Times New Roman', 'Courier New', 'Bebas Neue', 'Montserrat', 'Inter', 'Anton'].map(f => (
+                                  <option key={f} value={f}>{f}</option>
+                                ))}
+                              </select>
+                            </label>
+                            
+                            <label className="block">
+                              <span className="text-[10px] text-gray-500 mb-1 block">Huruf (Case)</span>
+                              <select value={el.textCase || 'uppercase'} onChange={e => updateElement(el.id, { textCase: e.target.value as any })} className="w-full bg-[#1A1A1A] border border-white/10 rounded px-2 py-1.5 text-xs text-white">
+                                <option value="none">Normal</option>
+                                <option value="uppercase">UPPERCASE</option>
+                                <option value="lowercase">lowercase</option>
+                                <option value="capitalize">Capitalize</option>
+                              </select>
+                            </label>
+                          </div>
+
+                          <label className="block">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-[10px] text-gray-500">Lebar ({el.width}px)</span>
+                            </div>
+                            <input type="range" min="200" max="1000" value={el.width || 600} onChange={e => updateElement(el.id, { width: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                          </label>
+                          
+                          <label className="block">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-[10px] text-gray-500">Tinggi ({el.height}px)</span>
+                            </div>
+                            <input type="range" min="50" max="300" value={el.height || 100} onChange={e => updateElement(el.id, { height: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                          </label>
+
+                          <div className="p-3 bg-white/5 rounded-lg space-y-3">
+                            <span className="text-[10px] font-bold text-white uppercase block mb-2">Warna Banner</span>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <label className="block">
+                                <span className="text-[10px] text-gray-500 mb-1 block">Warna Teks</span>
+                                <input type="color" value={el.color || '#ffffff'} onChange={e => updateElement(el.id, { color: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                              </label>
+
+                              <label className="block">
+                                <span className="text-[10px] text-gray-500 mb-1 block">Warna Border</span>
+                                <input type="color" value={el.strokeColor1 || '#ffffff'} onChange={e => updateElement(el.id, { strokeColor1: e.target.value, strokeColor2: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                              </label>
+
+                              <label className="block">
+                                <span className="text-[10px] text-gray-500 mb-1 block">Box Gradient Kiri</span>
+                                <input type="color" value={el.boxColor1 || '#df001c'} onChange={e => updateElement(el.id, { boxColor1: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
+                              </label>
+
+                              <label className="block">
+                                <span className="text-[10px] text-gray-500 mb-1 block">Box Gradient Kanan</span>
+                                <input type="color" value={el.boxColor2 || '#9a0914'} onChange={e => updateElement(el.id, { boxColor2: e.target.value })} className="block w-full h-8 rounded cursor-pointer bg-transparent border-0 p-0" />
                               </label>
                             </div>
                           </div>

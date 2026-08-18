@@ -75,7 +75,8 @@ export type ElementType =
   | "glowing_blocks"
   | "perspective_ring"
   | "progress_bar"
-  | "water_splash";
+  | "water_splash"
+  | "bracket_banner";
 export interface BaseElement {
   id: string;
   type: ElementType;
@@ -368,10 +369,26 @@ export type VizElement =
   | GlowingBlocksElement
   | PerspectiveRingElement
   | ProgressBarElement
-  | WaterSplashElement;
+  | WaterSplashElement
+  | BracketBannerElement;
 export interface AudioMetrics {
   rms: number;
   bass: number;
   mid: number;
   treble: number;
+}
+
+export interface BracketBannerElement extends BaseElement {
+  type: "bracket_banner";
+  width: number;
+  height: number;
+  text: string;
+  fontFamily: string;
+  color: string;
+  boxColor1: string;
+  boxColor2: string;
+  strokeColor1: string;
+  strokeColor2: string;
+  boxOpacity?: number;
+  textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
 }
