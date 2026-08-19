@@ -112,7 +112,9 @@ export interface TextElement extends BaseElement {
   fontFamily: string;
   letterSpacing?: number;
   useGradient?: boolean;
-  animation?: "none" | "glow_pulse" | "wave" | "bounce" | "drop_bounce" | "popup_words";
+  animation?: "none" | "glow_pulse" | "wave" | "bounce" | "drop_bounce" | "popup_words"
+    | "scattered"
+    | "arabic_cascade";
   isHanging?: boolean;
   templateStyle?:
     | "default"
@@ -133,6 +135,8 @@ export interface TextElement extends BaseElement {
     | "tiktok_karaoke"
     | "retro"
     | "popup_words"
+    | "scattered"
+    | "arabic_cascade"
     | "tiktok_shadow"
     | "highlight_pop"
     | "background_box"
@@ -279,6 +283,8 @@ export interface SubtitleElement extends BaseElement {
     | "tiktok_karaoke"
     | "retro"
     | "popup_words"
+    | "scattered"
+    | "arabic_cascade"
     | "tiktok_shadow"
     | "highlight_pop"
     | "background_box"

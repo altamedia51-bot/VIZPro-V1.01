@@ -1264,6 +1264,114 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                         currentX += (wordWidth + spaceWidth);
                     }
                   });
+                } else if (el.templateStyle === 'scattered') {
+                  const words = line.split(' ');
+                  const totalWords = words.length;
+                  
+                  const isArabic = /[\u0600-\u06FF\u0750-\u077F]/.test(line);
+                  const activeAudioIndex = Math.min(totalWords - 1, Math.floor(progress * totalWords));
+                  
+                  const wordLineHeight = el.fontSize * 0.9; 
+                  const groupStartY = lineY - ((totalWords - 1) * wordLineHeight) / 2;
+                  
+                  ctx.textAlign = 'center';
+                  
+                  words.forEach((word, audioIdx) => {
+                      const isActive = (audioIdx === activeAudioIndex);
+                      
+                      let staggerX = 0;
+                      const wY = groupStartY + audioIdx * wordLineHeight;
+                      const isRightSided = isArabic ? (audioIdx % 2 === 0) : (audioIdx % 2 !== 0);
+                      
+                      if (totalWords === 3) {
+                          if (audioIdx === 0) staggerX = el.fontSize * 1.2;
+                          else if (audioIdx === 1) staggerX = 0;
+                          else staggerX = -el.fontSize * 1.2;
+                      } else if (totalWords === 4) {
+                          if (audioIdx === 0) staggerX = -el.fontSize * 0.8;
+                          else if (audioIdx === 1) staggerX = el.fontSize * 0.8;
+                          else if (audioIdx === 2) staggerX = -el.fontSize * 0.6;
+                          else staggerX = 0;
+                      } else {
+                          staggerX = isRightSided ? el.fontSize * 0.8 : -el.fontSize * 0.8;
+                      }
+                      
+                      if (isActive) staggerX *= 0.3;
+                      
+                      ctx.save();
+                      ctx.translate(staggerX, wY);
+                      
+                      const wordProgress = (progress * totalWords) - audioIdx;
+                      let scale = 0.75; 
+                      
+                      if (isActive) {
+                         scale = 1.0 + Math.sin(Math.max(0, Math.min(1, wordProgress)) * Math.PI) * 0.6;
+                         ctx.fillStyle = el.color || '#E31B1B'; 
+                         ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+                         ctx.shadowBlur = 4;
+                      } else {
+                         ctx.fillStyle = '#FFFFFF'; 
+                         ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                         ctx.shadowBlur = 4;
+                         ctx.shadowOffsetX = 2;
+                         ctx.shadowOffsetY = 2;
+                      }
+                      
+                      ctx.scale(scale, scale);
+                      ctx.fillText(word, 0, 0);
+                      ctx.restore();
+                  });
+                } else if (el.templateStyle === 'arabic_cascade') {
+                  const words = line.split(' ').filter(w => w.trim() !== '');
+                  const totalWords = words.length;
+                  
+                  const allWords = textToRender.split(/\s+/).filter(w => w.trim() !== '');
+                  const globalTotalWords = allWords.length;
+                  const globalActiveWordIdx = Math.min(globalTotalWords - 1, Math.floor(progress * globalTotalWords));
+                  
+                  let startWordIdx = 0;
+                  for(let k=0; k<i; k++) {
+                      startWordIdx += lines[k].split(' ').filter(w => w.trim() !== '').length;
+                  }
+                  
+                  const spaceWidth = ctx.measureText(' ').width;
+                  const wordWidths = words.map(w => ctx.measureText(w).width);
+                  const totalLineWidth = wordWidths.reduce((a, b) => a + b, 0) + Math.max(0, totalWords - 1) * spaceWidth;
+                  
+                  // RTL layout: Start drawing from the right edge of the centered line
+                  let currentX = totalLineWidth / 2;
+                  ctx.textAlign = 'center';
+                  
+                  words.forEach((word, wIdx) => {
+                      const globalIdx = startWordIdx + wIdx;
+                      const isActive = (globalIdx === globalActiveWordIdx);
+                      
+                      const wWidth = wordWidths[wIdx];
+                      const wordCenterX = currentX - (wWidth / 2);
+                      
+                      ctx.save();
+                      ctx.translate(wordCenterX, lineY);
+                      
+                      if (isActive) {
+                          ctx.scale(1.15, 1.15);
+                          ctx.fillStyle = el.color || '#FFFFFF'; // Sorotan warna kustom (atau putih)
+                          ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+                          ctx.shadowBlur = 8;
+                          ctx.shadowOffsetX = 0;
+                          ctx.shadowOffsetY = 0;
+                      } else {
+                          ctx.fillStyle = '#FFFFFF'; 
+                          ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                          ctx.shadowBlur = 4;
+                          ctx.shadowOffsetX = 1;
+                          ctx.shadowOffsetY = 1;
+                      }
+                      
+                      ctx.fillText(word, 0, 0);
+                      ctx.restore();
+                      
+                      currentX -= (wWidth + spaceWidth);
+                  });
                 } else if (el.templateStyle === 'tiktok_karaoke') {
                   // Word by word highlighting
                   const words = line.split(' ');

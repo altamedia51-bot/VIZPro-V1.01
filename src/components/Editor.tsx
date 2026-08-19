@@ -1596,6 +1596,12 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                              <button onClick={() => updateElement(el.id, { templateStyle: 'popup_words', color: '#ffcc00' })} className="p-2 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center h-16">
                                <span className="text-[#ffcc00] font-bold text-[10px]" style={{textShadow: '1px 1px 0px #000', transform: 'scale(1.1)'}}>Pop-Up Arab</span>
                              </button>
+                             <button onClick={() => updateElement(el.id, { templateStyle: 'scattered', color: '#E31B1B', fontFamily: 'Georgia' })} className="p-2 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center h-16">
+                               <span className="text-[#E31B1B] font-bold text-[10px] text-center leading-tight" style={{fontFamily: 'Georgia', textShadow: '1px 1px 0px #FFF'}}>Scattered<br/>Pop</span>
+                             </button>
+                             <button onClick={() => updateElement(el.id, { templateStyle: 'arabic_cascade', color: '#E31B1B' })} className="p-2 bg-[#1A1A1A] border border-white/5 hover:border-blue-500 rounded flex items-center justify-center h-16">
+                               <span className="text-white font-bold text-[10px] text-center leading-tight">Arabic<br/>Cascade</span>
+                             </button>
                            </div>
                            )}
                         </div>
