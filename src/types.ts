@@ -76,6 +76,7 @@ export type ElementType =
   | "glowing_blocks"
   | "perspective_ring"
   | "progress_bar"
+  | "progress_visualizer"
   | "water_splash"
   | "bracket_banner";
 export interface BaseElement {
@@ -305,6 +306,7 @@ export interface ImageElement extends BaseElement {
   src: string;
   width: number;
   height: number;
+  useColorTint?: boolean;
 }
 export interface ColorPixelElement extends BaseElement {
   type: "color_pixel";
@@ -344,6 +346,22 @@ export interface ProgressBarElement extends BaseElement {
   fontSize: number;
   fontFamily: string;
 }
+export interface ProgressVisualizerElement extends BaseElement {
+  type: "progress_visualizer";
+  width: number;
+  height: number;
+  barHeight: number;
+  barWidth: number;
+  barSpacing: number;
+  waveformStyle: "bars" | "mirrored" | "wave" | "dots";
+  showTime: boolean;
+  showKnob: boolean;
+  knobSize: number;
+  fontSize: number;
+  fontFamily: string;
+  trackColor?: string;
+  glowIntensity?: number;
+}
 export interface WaterSplashElement extends BaseElement {
   type: "water_splash";
   particleCount: number;
@@ -382,6 +400,7 @@ export type VizElement =
   | GlowingBlocksElement
   | PerspectiveRingElement
   | ProgressBarElement
+  | ProgressVisualizerElement
   | WaterSplashElement
   | BracketBannerElement;
 export interface AudioMetrics {

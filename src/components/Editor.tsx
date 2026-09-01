@@ -225,15 +225,6 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
       newEl.text = 'New Text';
       newEl.fontSize = 60;
       newEl.fontFamily = 'Arial';
-    } else if (type === 'sticker_text') {
-      newEl.text = 'Happy Birthday';
-      newEl.fontSize = 120;
-      newEl.fontFamily = 'Brush Script MT, cursive';
-      newEl.color = '#ff0000';
-      newEl.color2 = '#ff8888';
-      newEl.useGradient = true;
-      newEl.strokeColor1 = '#ffffff';
-      newEl.lineWidth = 15;
     } else if (type === 'banner') {
       newEl.width = 600;
       newEl.height = 100;
@@ -317,6 +308,22 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
       newEl.showTime = true;
       newEl.fontSize = 24;
       newEl.fontFamily = 'Inter';
+    } else if (type === 'progress_visualizer') {
+      newEl.width = 640;
+      newEl.height = 4;
+      newEl.barHeight = 40;
+      newEl.barWidth = 4;
+      newEl.barSpacing = 3;
+      newEl.waveformStyle = 'bars';
+      newEl.showTime = true;
+      newEl.showKnob = true;
+      newEl.knobSize = 7;
+      newEl.fontSize = 16;
+      newEl.fontFamily = 'Inter';
+      newEl.color = '#3b82f6';
+      newEl.color2 = '#8b5cf6';
+      newEl.useGradient = true;
+      newEl.glowIntensity = 15;
     } else if (type === 'water_splash') {
       newEl.particleCount = 150;
       newEl.splashRadius = 250;
@@ -1328,6 +1335,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                       { type: 'orbs', name: 'Frequency Orbs', category: 'cyber', label: 'ORBS & GLOW' },
                       
                       // particles & shapes & elements
+                      { type: 'progress_visualizer', name: 'Progress Visualizer', category: 'particles', label: 'PLAYER & WAVE' },
                       { type: 'water_splash', name: 'Water Splash Burst', category: 'particles', label: 'PARTICLES' },
                       { type: 'particles', name: 'Particle Explosion', category: 'particles', label: 'PARTICLES' },
                       { type: 'spiral_galaxy', name: 'Spiral Galaxy', category: 'particles', label: 'PARTICLES' },
@@ -2131,6 +2139,116 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                         </div>
                         <input type="range" min="10" max="100" value={el.fontSize || 24} onChange={e => updateElement(el.id, { fontSize: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
                       </label>
+                    </>
+                  )}
+
+                  {el.type === 'progress_visualizer' && (
+                    <>
+                      <label className="block mt-4">
+                        <span className="text-[10px] text-gray-500 mb-2 block">Gaya Visualizer Gelombang</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { id: 'bars', name: 'Equalizer Bars' },
+                            { id: 'mirrored', name: 'Mirrored Wave' },
+                            { id: 'wave', name: 'Smooth Curve' },
+                            { id: 'dots', name: 'Dotted Column' },
+                          ].map(style => (
+                            <button
+                              key={style.id}
+                              onClick={() => updateElement(el.id, { waveformStyle: style.id as any })}
+                              className={`p-2 rounded text-xs font-medium border transition-colors ${
+                                (el.waveformStyle || 'bars') === style.id
+                                  ? 'bg-blue-600/30 border-blue-500 text-white'
+                                  : 'bg-[#1A1A1A] border-white/5 text-gray-400 hover:text-white'
+                              }`}
+                            >
+                              {style.name}
+                            </button>
+                          ))}
+                        </div>
+                      </label>
+
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Panjang Progress Bar ({el.width || 640}px)</span>
+                        </div>
+                        <input type="range" min="200" max="1920" step="10" value={el.width || 640} onChange={e => updateElement(el.id, { width: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Tinggi Visualizer ({el.barHeight || 40}px)</span>
+                        </div>
+                        <input type="range" min="10" max="200" value={el.barHeight || 40} onChange={e => updateElement(el.id, { barHeight: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Lebar Bar ({el.barWidth || 4}px)</span>
+                        </div>
+                        <input type="range" min="1" max="20" value={el.barWidth || 4} onChange={e => updateElement(el.id, { barWidth: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Jarak Spasi Bar ({el.barSpacing || 3}px)</span>
+                        </div>
+                        <input type="range" min="1" max="20" value={el.barSpacing || 3} onChange={e => updateElement(el.id, { barSpacing: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Ketebalan Garis Jalur ({el.height || 4}px)</span>
+                        </div>
+                        <input type="range" min="1" max="20" value={el.height || 4} onChange={e => updateElement(el.id, { height: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Glow Intensity ({el.glowIntensity || 15})</span>
+                        </div>
+                        <input type="range" min="0" max="60" value={el.glowIntensity || 0} onChange={e => updateElement(el.id, { glowIntensity: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+
+                      <div className="flex items-center gap-2 mt-4 mb-2">
+                        <input 
+                          type="checkbox" 
+                          id={`show-knob-${el.id}`}
+                          checked={el.showKnob !== false} 
+                          onChange={e => updateElement(el.id, { showKnob: e.target.checked })}
+                          className="rounded bg-black/50 border-white/10 text-indigo-500"
+                        />
+                        <label htmlFor={`show-knob-${el.id}`} className="text-[10px] text-gray-400 cursor-pointer">Tampilkan Titik Playhead (Knob)</label>
+                      </div>
+
+                      {el.showKnob !== false && (
+                        <label className="block mt-2">
+                          <div className="flex justify-between mb-1">
+                            <span className="text-[10px] text-gray-500">Ukuran Knob ({el.knobSize || 7}px)</span>
+                          </div>
+                          <input type="range" min="3" max="25" value={el.knobSize || 7} onChange={e => updateElement(el.id, { knobSize: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                        </label>
+                      )}
+
+                      <div className="flex items-center gap-2 mt-4 mb-2">
+                        <input 
+                          type="checkbox" 
+                          id={`show-time-pv-${el.id}`}
+                          checked={el.showTime !== false} 
+                          onChange={e => updateElement(el.id, { showTime: e.target.checked })}
+                          className="rounded bg-black/50 border-white/10 text-indigo-500"
+                        />
+                        <label htmlFor={`show-time-pv-${el.id}`} className="text-[10px] text-gray-400 cursor-pointer">Tampilkan Waktu (00:00 / 03:45)</label>
+                      </div>
+
+                      {el.showTime !== false && (
+                        <label className="block mt-2">
+                          <div className="flex justify-between mb-1">
+                            <span className="text-[10px] text-gray-500">Ukuran Font Waktu ({el.fontSize || 16}px)</span>
+                          </div>
+                          <input type="range" min="10" max="48" value={el.fontSize || 16} onChange={e => updateElement(el.id, { fontSize: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                        </label>
+                      )}
                     </>
                   )}
 

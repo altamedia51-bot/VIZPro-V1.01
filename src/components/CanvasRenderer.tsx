@@ -79,10 +79,10 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
         const dx = x - el.x;
         const dy = y - el.y;
         hit = Math.sqrt(dx * dx + dy * dy) <= el.radius * elScale;
-      } else if (el.type === 'progress_bar') {
+      } else if (el.type === 'progress_bar' || el.type === 'progress_visualizer') {
         const e = el as any;
-        const totalW = e.width;
-        const totalH = e.height + (e.showTime !== false ? e.fontSize * 2 : 0);
+        const totalW = e.width || 640;
+        const totalH = (e.barHeight ? e.barHeight * 2 : 50) + (e.showTime !== false ? (e.fontSize || 24) * 2 : 20);
         hit = Math.abs(x - el.x) <= (totalW * elScale) / 2 && Math.abs(y - el.y) <= (totalH * elScale) / 2;
       } else if (el.type === 'water_splash') {
         const e = el as any;
@@ -2140,6 +2140,250 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                  ctx.fillText(timeStr, width/2, height/2 + 20 + (pBar.fontSize || 24)/2);
              }
              
+             ctx.restore();
+          }
+          else if (el.type === 'progress_visualizer') {
+             const pViz = el as any;
+             const width = pViz.width || 640;
+             const trackHeight = pViz.height || 4;
+             const maxBarHeight = pViz.barHeight || 40;
+             const barWidth = pViz.barWidth || 4;
+             const barSpacing = pViz.barSpacing || 3;
+             const style = pViz.waveformStyle || 'bars';
+             const showKnob = pViz.showKnob !== false;
+             const knobRadius = pViz.knobSize || 7;
+             const glow = pViz.glowIntensity !== undefined ? pViz.glowIntensity : 15;
+             const trackColor = pViz.trackColor || 'rgba(255, 255, 255, 0.2)';
+             
+             let prog = 0;
+             if (duration && duration > 0 && currentTimeRef.current) {
+                 prog = Math.min(1, Math.max(0, currentTimeRef.current / duration));
+             }
+             
+             const barStep = barWidth + barSpacing;
+             const barCount = Math.max(10, Math.floor((width - barSpacing) / barStep));
+             const effectiveWidth = (barCount - 1) * barStep + barWidth;
+             const startX = -effectiveWidth / 2;
+
+             ctx.save();
+             ctx.translate(el.x, el.y);
+
+             // Calculate bass boost for subtle dynamic responsiveness
+             const bassAvg = freqData.length ? (freqData.slice(0, 8).reduce((a, b) => a + b, 0) / (8 * 255)) : 0;
+             
+             // 1. Draw Waveform / Visualizer Bars / Waves
+             if (style === 'bars') {
+                 for (let i = 0; i < barCount; i++) {
+                     const barProg = barCount > 1 ? i / (barCount - 1) : 0;
+                     const isPast = barProg <= prog;
+                     
+                     const freqIdx = Math.floor((i / barCount) * Math.min(freqLength, 96));
+                     const val = freqData[freqIdx] || 0;
+                     const amp = val / 255;
+                     const bh = Math.max(4, amp * maxBarHeight + (bassAvg * 4));
+                     const bx = startX + i * barStep;
+                     const by = -trackHeight / 2;
+
+                     if (isPast) {
+                         ctx.fillStyle = getStyle(el, -width/2, 0, width/2, 0);
+                         if (glow > 0) {
+                             ctx.shadowBlur = glow * (0.6 + amp * 0.4);
+                             ctx.shadowColor = el.color || '#3b82f6';
+                         }
+                     } else {
+                         ctx.fillStyle = trackColor;
+                         ctx.shadowBlur = 0;
+                     }
+
+                     ctx.beginPath();
+                     ctx.roundRect(bx, by - bh, barWidth, bh, [barWidth/2, barWidth/2, 1, 1]);
+                     ctx.fill();
+                 }
+                 ctx.shadowBlur = 0;
+             } else if (style === 'mirrored') {
+                 for (let i = 0; i < barCount; i++) {
+                     const barProg = barCount > 1 ? i / (barCount - 1) : 0;
+                     const isPast = barProg <= prog;
+                     
+                     const freqIdx = Math.floor((i / barCount) * Math.min(freqLength, 96));
+                     const val = freqData[freqIdx] || 0;
+                     const amp = val / 255;
+                     const bh = Math.max(4, amp * maxBarHeight);
+                     const bx = startX + i * barStep;
+
+                     if (isPast) {
+                         ctx.fillStyle = getStyle(el, -width/2, 0, width/2, 0);
+                         if (glow > 0) {
+                             ctx.shadowBlur = glow;
+                             ctx.shadowColor = el.color || '#3b82f6';
+                         }
+                     } else {
+                         ctx.fillStyle = trackColor;
+                         ctx.shadowBlur = 0;
+                     }
+
+                     ctx.beginPath();
+                     ctx.roundRect(bx, -bh / 2, barWidth, bh, barWidth / 2);
+                     ctx.fill();
+                 }
+                 ctx.shadowBlur = 0;
+             } else if (style === 'dots') {
+                 const dotLayers = 6;
+                 const dotSize = Math.max(2, Math.min(barWidth, 6));
+                 for (let i = 0; i < barCount; i++) {
+                     const barProg = barCount > 1 ? i / (barCount - 1) : 0;
+                     const isPast = barProg <= prog;
+                     const freqIdx = Math.floor((i / barCount) * Math.min(freqLength, 96));
+                     const val = freqData[freqIdx] || 0;
+                     const amp = val / 255;
+                     const activeLayers = Math.ceil(amp * dotLayers);
+                     const bx = startX + i * barStep + barWidth / 2;
+
+                     for (let l = 0; l < dotLayers; l++) {
+                         const dy = -trackHeight / 2 - 4 - l * (dotSize * 1.6);
+                         const isLit = l < activeLayers;
+                         if (isPast && isLit) {
+                             ctx.fillStyle = getStyle(el, -width/2, 0, width/2, 0);
+                             ctx.shadowBlur = glow;
+                             ctx.shadowColor = el.color || '#3b82f6';
+                         } else if (isLit) {
+                             ctx.fillStyle = trackColor;
+                             ctx.shadowBlur = 0;
+                         } else {
+                             ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+                             ctx.shadowBlur = 0;
+                         }
+                         ctx.beginPath();
+                         ctx.arc(bx, dy, dotSize / 2, 0, Math.PI * 2);
+                         ctx.fill();
+                     }
+                 }
+                 ctx.shadowBlur = 0;
+             } else if (style === 'wave') {
+                 const points: { x: number; y: number }[] = [];
+                 for (let i = 0; i < barCount; i++) {
+                     const freqIdx = Math.floor((i / barCount) * Math.min(freqLength, 96));
+                     const val = freqData[freqIdx] || 0;
+                     const amp = val / 255;
+                     const bh = amp * maxBarHeight;
+                     const bx = startX + i * barStep + barWidth / 2;
+                     points.push({ x: bx, y: -trackHeight / 2 - 4 - bh });
+                 }
+
+                 if (points.length > 1) {
+                     // Draw inactive wave first
+                     ctx.strokeStyle = trackColor;
+                     ctx.lineWidth = 2.5;
+                     ctx.beginPath();
+                     ctx.moveTo(points[0].x, points[0].y);
+                     for (let i = 1; i < points.length; i++) {
+                         const xc = (points[i].x + points[i-1].x) / 2;
+                         const yc = (points[i].y + points[i-1].y) / 2;
+                         ctx.quadraticCurveTo(points[i-1].x, points[i-1].y, xc, yc);
+                     }
+                     ctx.stroke();
+
+                     // Draw active filled wave with clip
+                     if (prog > 0) {
+                         ctx.save();
+                         ctx.beginPath();
+                         ctx.rect(-width/2 - 10, -maxBarHeight - 50, width * prog + 10, maxBarHeight + 100);
+                         ctx.clip();
+
+                         ctx.strokeStyle = getStyle(el, -width/2, 0, width/2, 0);
+                         ctx.lineWidth = 3;
+                         if (glow > 0) {
+                             ctx.shadowBlur = glow;
+                             ctx.shadowColor = el.color || '#3b82f6';
+                         }
+                         ctx.beginPath();
+                         ctx.moveTo(points[0].x, points[0].y);
+                         for (let i = 1; i < points.length; i++) {
+                             const xc = (points[i].x + points[i-1].x) / 2;
+                             const yc = (points[i].y + points[i-1].y) / 2;
+                             ctx.quadraticCurveTo(points[i-1].x, points[i-1].y, xc, yc);
+                         }
+                         ctx.stroke();
+                         ctx.restore();
+                     }
+                 }
+             }
+
+             // 2. Draw Main Progress Track Bar
+             ctx.fillStyle = trackColor;
+             ctx.beginPath();
+             ctx.roundRect(-width/2, -trackHeight/2, width, trackHeight, trackHeight/2);
+             ctx.fill();
+
+             // 3. Draw Active Progress Fill
+             if (prog > 0) {
+                 ctx.fillStyle = getStyle(el, -width/2, 0, width/2, 0);
+                 if (glow > 0) {
+                     ctx.shadowBlur = glow;
+                     ctx.shadowColor = el.color || '#3b82f6';
+                 }
+                 ctx.beginPath();
+                 ctx.roundRect(-width/2, -trackHeight/2, Math.max(trackHeight, width * prog), trackHeight, trackHeight/2);
+                 ctx.fill();
+                 ctx.shadowBlur = 0;
+             }
+
+             // 4. Draw Playhead Knob
+             const knobX = -width/2 + width * prog;
+             if (showKnob) {
+                 const reactivePulse = bassAvg * 3;
+                 // Outer soft halo
+                 ctx.fillStyle = el.color ? `${el.color}33` : 'rgba(59, 130, 246, 0.25)';
+                 ctx.beginPath();
+                 ctx.arc(knobX, 0, knobRadius + 4 + reactivePulse, 0, Math.PI * 2);
+                 ctx.fill();
+
+                 // Main Knob
+                 ctx.fillStyle = '#ffffff';
+                 if (glow > 0) {
+                     ctx.shadowBlur = glow + 5;
+                     ctx.shadowColor = el.color || '#3b82f6';
+                 }
+                 ctx.beginPath();
+                 ctx.arc(knobX, 0, knobRadius + reactivePulse * 0.5, 0, Math.PI * 2);
+                 ctx.fill();
+                 ctx.shadowBlur = 0;
+
+                 // Inner core
+                 ctx.fillStyle = el.color || '#3b82f6';
+                 ctx.beginPath();
+                 ctx.arc(knobX, 0, Math.max(2, knobRadius * 0.45), 0, Math.PI * 2);
+                 ctx.fill();
+             }
+
+             // 5. Draw Timestamps (Current Time on Left, Duration on Right)
+             if (pViz.showTime !== false) {
+                 const currentSec = Math.floor(currentTimeRef.current || 0);
+                 const curM = Math.floor(currentSec / 60);
+                 const curS = currentSec % 60;
+                 const curTimeStr = `${curM}:${curS.toString().padStart(2, '0')}`;
+
+                 const durSec = Math.floor(duration || 0);
+                 const durM = Math.floor(durSec / 60);
+                 const durS = durSec % 60;
+                 const durTimeStr = `${durM}:${durS.toString().padStart(2, '0')}`;
+
+                 const fSize = pViz.fontSize || 16;
+                 ctx.font = `600 ${fSize}px ${pViz.fontFamily || 'Inter'}`;
+                 ctx.fillStyle = '#ffffff';
+                 ctx.textBaseline = 'top';
+                 const textY = trackHeight/2 + 10;
+
+                 // Left: Current time
+                 ctx.textAlign = 'left';
+                 ctx.fillText(curTimeStr, -width/2, textY);
+
+                 // Right: Total duration
+                 ctx.textAlign = 'right';
+                 ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                 ctx.fillText(durTimeStr, width/2, textY);
+             }
+
              ctx.restore();
           }
           else if (el.type === 'water_splash') {
