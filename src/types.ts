@@ -353,7 +353,7 @@ export interface ProgressVisualizerElement extends BaseElement {
   barHeight: number;
   barWidth: number;
   barSpacing: number;
-  waveformStyle: "bars" | "mirrored" | "wave" | "dots" | "segmented";
+  waveformStyle: "bars" | "mirrored" | "wave" | "dots" | "segmented" | "spectrum";
   showTime: boolean;
   showKnob: boolean;
   knobSize: number;

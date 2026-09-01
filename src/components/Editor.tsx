@@ -2154,6 +2154,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                             { id: 'wave', name: 'Smooth Curve' },
                             { id: 'dots', name: 'Dotted Column' },
                             { id: 'segmented', name: 'Segmented Blocks' },
+                            { id: 'spectrum', name: 'Spectrum Bars (Rainbow)' },
                           ].map(style => (
                             <button
                               key={style.id}
