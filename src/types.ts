@@ -353,13 +353,14 @@ export interface ProgressVisualizerElement extends BaseElement {
   barHeight: number;
   barWidth: number;
   barSpacing: number;
-  waveformStyle: "bars" | "mirrored" | "wave" | "dots";
+  waveformStyle: "bars" | "mirrored" | "wave" | "dots" | "segmented";
   showTime: boolean;
   showKnob: boolean;
   knobSize: number;
   fontSize: number;
   fontFamily: string;
   trackColor?: string;
+  waveformOffset?: number;
   glowIntensity?: number;
 }
 export interface WaterSplashElement extends BaseElement {

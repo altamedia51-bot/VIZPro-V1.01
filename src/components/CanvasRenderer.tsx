@@ -2154,6 +2154,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
              const knobRadius = pViz.knobSize || 7;
              const glow = pViz.glowIntensity !== undefined ? pViz.glowIntensity : 15;
              const trackColor = pViz.trackColor || 'rgba(255, 255, 255, 0.2)';
+             const wOffset = pViz.waveformOffset || 0;
              
              let prog = 0;
              if (duration && duration > 0 && currentTimeRef.current) {
@@ -2182,7 +2183,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                      const amp = val / 255;
                      const bh = Math.max(4, amp * maxBarHeight + (bassAvg * 4));
                      const bx = startX + i * barStep;
-                     const by = -trackHeight / 2;
+                     const by = -trackHeight / 2 - wOffset;
 
                      if (isPast) {
                          ctx.fillStyle = getStyle(el, -width/2, 0, width/2, 0);
@@ -2223,8 +2224,49 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                      }
 
                      ctx.beginPath();
-                     ctx.roundRect(bx, -bh / 2, barWidth, bh, barWidth / 2);
+                     ctx.roundRect(bx, -bh / 2 - wOffset, barWidth, bh, barWidth / 2);
                      ctx.fill();
+                 }
+                 ctx.shadowBlur = 0;
+             } else if (style === 'segmented') {
+                 // Render segmented LED-style blocks
+                 const segmentHeight = 4; // Height of each small block
+                 const segmentGap = 2;    // Vertical gap between blocks
+                 const stepHeight = segmentHeight + segmentGap;
+                 
+                 for (let i = 0; i < barCount; i++) {
+                     const barProg = barCount > 1 ? i / (barCount - 1) : 0;
+                     const isPast = barProg <= prog;
+                     const freqIdx = Math.floor((i / barCount) * Math.min(freqLength, 96));
+                     const val = freqData[freqIdx] || 0;
+                     
+                     // Minimum 1 block, calculate max blocks based on maxBarHeight
+                     const amp = val / 255;
+                     const targetTotalHeight = Math.max(stepHeight, amp * maxBarHeight + (bassAvg * 4));
+                     const activeSegments = Math.ceil(targetTotalHeight / stepHeight);
+                     
+                     const bx = startX + i * barStep;
+                     
+                     for (let s = 0; s < activeSegments; s++) {
+                         // Calculate Y position for each segment going upwards
+                         const by = -trackHeight / 2 - 2 - wOffset - (s * stepHeight) - segmentHeight;
+                         
+                         if (isPast) {
+                             ctx.fillStyle = getStyle(el, -width/2, 0, width/2, 0);
+                             if (glow > 0) {
+                                 ctx.shadowBlur = glow * (0.6 + amp * 0.4);
+                                 ctx.shadowColor = el.color || '#3b82f6';
+                             }
+                         } else {
+                             ctx.fillStyle = trackColor;
+                             ctx.shadowBlur = 0;
+                         }
+                         
+                         ctx.beginPath();
+                         // Draw small rectangular block
+                         ctx.rect(bx, by, barWidth, segmentHeight);
+                         ctx.fill();
+                     }
                  }
                  ctx.shadowBlur = 0;
              } else if (style === 'dots') {
@@ -2240,7 +2282,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                      const bx = startX + i * barStep + barWidth / 2;
 
                      for (let l = 0; l < dotLayers; l++) {
-                         const dy = -trackHeight / 2 - 4 - l * (dotSize * 1.6);
+                         const dy = -trackHeight / 2 - 4 - wOffset - l * (dotSize * 1.6);
                          const isLit = l < activeLayers;
                          if (isPast && isLit) {
                              ctx.fillStyle = getStyle(el, -width/2, 0, width/2, 0);
@@ -2267,7 +2309,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                      const amp = val / 255;
                      const bh = amp * maxBarHeight;
                      const bx = startX + i * barStep + barWidth / 2;
-                     points.push({ x: bx, y: -trackHeight / 2 - 4 - bh });
+                     points.push({ x: bx, y: -trackHeight / 2 - 4 - wOffset - bh });
                  }
 
                  if (points.length > 1) {
@@ -2287,7 +2329,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                      if (prog > 0) {
                          ctx.save();
                          ctx.beginPath();
-                         ctx.rect(-width/2 - 10, -maxBarHeight - 50, width * prog + 10, maxBarHeight + 100);
+                         ctx.rect(-width/2 - 10, -maxBarHeight - 50 - wOffset, width * prog + 10, maxBarHeight + 100 + wOffset);
                          ctx.clip();
 
                          ctx.strokeStyle = getStyle(el, -width/2, 0, width/2, 0);

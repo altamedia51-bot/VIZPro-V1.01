@@ -324,6 +324,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
       newEl.color2 = '#8b5cf6';
       newEl.useGradient = true;
       newEl.glowIntensity = 15;
+      newEl.waveformOffset = 10;
     } else if (type === 'water_splash') {
       newEl.particleCount = 150;
       newEl.splashRadius = 250;
@@ -2152,6 +2153,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                             { id: 'mirrored', name: 'Mirrored Wave' },
                             { id: 'wave', name: 'Smooth Curve' },
                             { id: 'dots', name: 'Dotted Column' },
+                            { id: 'segmented', name: 'Segmented Blocks' },
                           ].map(style => (
                             <button
                               key={style.id}
@@ -2194,6 +2196,13 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                           <span className="text-[10px] text-gray-500">Jarak Spasi Bar ({el.barSpacing || 3}px)</span>
                         </div>
                         <input type="range" min="1" max="20" value={el.barSpacing || 3} onChange={e => updateElement(el.id, { barSpacing: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
+                      </label>
+
+                      <label className="block mt-4">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">Jarak Waveform ke Bar ({el.waveformOffset || 0}px)</span>
+                        </div>
+                        <input type="range" min="0" max="200" value={el.waveformOffset || 0} onChange={e => updateElement(el.id, { waveformOffset: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
                       </label>
 
                       <label className="block mt-4">
