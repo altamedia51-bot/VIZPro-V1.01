@@ -6,7 +6,7 @@ import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { Timeline } from './Timeline';
 import { useAudioAnalyzer } from '../hooks/useAudioAnalyzer';
 import { Recorder } from '../utils/recordStream';
-import { Play, Pause, SkipBack, Square, Plus, Image as ImageIcon, Download, Trash2, Home, Music, Radio, Type, Sparkles, Layers, Search, Volume2, VolumeX, ChevronDown, FolderOpen, Undo2, Redo2, FileCode, Maximize2, Settings as SettingsIcon, CheckCircle2, Cpu, Settings, Database, Activity, Wind, Zap, Move, Camera } from 'lucide-react';
+import { Play, Pause, SkipBack, Square, Plus, Image as ImageIcon, Download, Trash2, Home, Music, Radio, Type, Sparkles, Layers, Search, Volume2, VolumeX, ChevronDown, ChevronUp, FolderOpen, Undo2, Redo2, FileCode, Maximize2, Settings as SettingsIcon, CheckCircle2, Cpu, Settings, Database, Activity, Wind, Zap, Move, Camera, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Copy, Edit2, Sliders, Palette } from 'lucide-react';
 import { parseSRT } from '../utils/srtParser';
 import { db } from '../lib/db';
 
@@ -87,6 +87,9 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
   const [subtitleTab, setSubtitleTab] = useState<'basic' | 'templates'>('templates');
   const [openTemplateAccordion, setOpenTemplateAccordion] = useState<string>('style_dasar');
   const [draggedSubtitleIndex, setDraggedSubtitleIndex] = useState<number | null>(null);
+  const [openStickersAccordion, setOpenStickersAccordion] = useState(false);
+  const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
+  const [layerNameInput, setLayerNameInput] = useState('');
   const recorderRef = useRef<Recorder | null>(null);
   const rendererRef = useRef<CanvasRendererRef>(null);
 
@@ -407,6 +410,156 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
     if (selectedElementId === id) {
       setSelectedElementId(null);
     }
+  };
+
+  const moveLayerUp = (id: string) => {
+    setProject(prev => {
+      const idx = prev.elements.findIndex(el => el.id === id);
+      if (idx < 0 || idx >= prev.elements.length - 1) return prev;
+      const newElements = [...prev.elements];
+      const temp = newElements[idx];
+      newElements[idx] = newElements[idx + 1];
+      newElements[idx + 1] = temp;
+      return { ...prev, elements: newElements };
+    });
+  };
+
+  const moveLayerDown = (id: string) => {
+    setProject(prev => {
+      const idx = prev.elements.findIndex(el => el.id === id);
+      if (idx <= 0) return prev;
+      const newElements = [...prev.elements];
+      const temp = newElements[idx];
+      newElements[idx] = newElements[idx - 1];
+      newElements[idx - 1] = temp;
+      return { ...prev, elements: newElements };
+    });
+  };
+
+  const bringToFront = (id: string) => {
+    setProject(prev => {
+      const el = prev.elements.find(e => e.id === id);
+      if (!el) return prev;
+      const newElements = prev.elements.filter(e => e.id !== id);
+      newElements.push(el);
+      return { ...prev, elements: newElements };
+    });
+  };
+
+  const sendToBack = (id: string) => {
+    setProject(prev => {
+      const el = prev.elements.find(e => e.id === id);
+      if (!el) return prev;
+      const newElements = prev.elements.filter(e => e.id !== id);
+      newElements.unshift(el);
+      return { ...prev, elements: newElements };
+    });
+  };
+
+  const toggleLock = (id: string) => {
+    setProject(prev => ({
+      ...prev,
+      elements: prev.elements.map(el => el.id === id ? { ...el, locked: !el.locked } : el)
+    }));
+  };
+
+  const toggleHide = (id: string) => {
+    setProject(prev => ({
+      ...prev,
+      elements: prev.elements.map(el => el.id === id ? { ...el, hidden: !el.hidden } : el)
+    }));
+  };
+
+  const duplicateElement = (id: string) => {
+    const el = project.elements.find(e => e.id === id);
+    if (!el) return;
+    const newId = crypto.randomUUID();
+    const newEl: any = {
+      ...JSON.parse(JSON.stringify(el)),
+      id: newId,
+      x: (el.x || 640) + 30,
+      y: (el.y || 360) + 30,
+      name: el.name ? `${el.name} (Copy)` : undefined,
+    };
+    setProject(prev => ({
+      ...prev,
+      elements: [...prev.elements, newEl]
+    }));
+    setSelectedElementId(newId);
+  };
+
+  const addStaticImage = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      let targetWidth = img.width || 200;
+      let targetHeight = img.height || 200;
+      const MAX_SIZE = 350;
+      if (targetWidth > MAX_SIZE || targetHeight > MAX_SIZE) {
+        const ratio = Math.min(MAX_SIZE / targetWidth, MAX_SIZE / targetHeight);
+        targetWidth = Math.round(targetWidth * ratio);
+        targetHeight = Math.round(targetHeight * ratio);
+      }
+      const newEl: any = {
+        id: crypto.randomUUID(),
+        type: 'image',
+        name: file.name.replace(/\.[^/.]+$/, "") || 'Logo Overlay',
+        src: url,
+        x: 640,
+        y: 360,
+        scale: 1,
+        rotation: 0,
+        opacity: 1,
+        width: targetWidth,
+        height: targetHeight,
+      };
+      setProject(p => ({ ...p, elements: [...p.elements, newEl] }));
+      setSelectedElementId(newEl.id);
+    };
+    img.src = url;
+  };
+
+  const addStaticText = () => {
+    const newEl: any = {
+      id: crypto.randomUUID(),
+      type: 'text',
+      name: 'Teks Overlay',
+      text: 'TEKS OVERLAY',
+      x: 640,
+      y: 360,
+      scale: 1,
+      rotation: 0,
+      color: '#ffffff',
+      opacity: 1,
+      fontSize: 52,
+      fontFamily: 'Montserrat',
+    };
+    setProject(p => ({ ...p, elements: [...p.elements, newEl] }));
+    setSelectedElementId(newEl.id);
+  };
+
+  const addStaticBanner = () => {
+    const newEl: any = {
+      id: crypto.randomUUID(),
+      type: 'bracket_banner',
+      name: 'Bracket Banner',
+      text: 'NOW PLAYING',
+      x: 640,
+      y: 560,
+      width: 480,
+      height: 70,
+      scale: 1,
+      rotation: 0,
+      color: '#ffffff',
+      opacity: 1,
+      boxColor1: '#df001c',
+      boxColor2: '#121212',
+      strokeColor1: '#00ffff',
+      strokeColor2: '#ff0055',
+      fontFamily: 'Oswald',
+    };
+    setProject(p => ({ ...p, elements: [...p.elements, newEl] }));
+    setSelectedElementId(newEl.id);
   };
 
   const takeSnapshot = () => {
@@ -1213,224 +1366,298 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
             )}
 
             {activeTab === 'layers' && (
-              <div className="p-6">
-                <div className="mb-6">
+              <div className="flex flex-col h-full overflow-hidden p-4 space-y-4">
+                {/* Overlay Creation Actions */}
+                <div className="bg-[#141418] border border-white/5 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold flex items-center gap-1.5">
+                      <Plus size={12} className="text-blue-400" /> Tambah Elemen Overlay
+                    </h2>
+                  </div>
+
                   <input
                     type="file"
-                    accept="image/png, image/jpeg, image/webp"
+                    accept="image/png, image/jpeg, image/webp, image/svg+xml"
                     id="image-upload"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        const url = URL.createObjectURL(file);
-                        const img = new Image();
-                        img.onload = () => {
-                          const isAutoText = (document.getElementById('auto-text-checkbox') as HTMLInputElement)?.checked ?? true;
-                          const imageId = crypto.randomUUID();
-                          const groupId = isAutoText ? crypto.randomUUID() : undefined;
-                          
-                          // Default max dimension to 200px
-                          let targetWidth = img.width;
-                          let targetHeight = img.height;
-                          const MAX_SIZE = 200;
-                          
-                          if (targetWidth > MAX_SIZE || targetHeight > MAX_SIZE) {
-                            if (targetWidth > targetHeight) {
-                                targetHeight = targetHeight * (MAX_SIZE / targetWidth);
-                                targetWidth = MAX_SIZE;
-                            } else {
-                                targetWidth = targetWidth * (MAX_SIZE / targetHeight);
-                                targetHeight = MAX_SIZE;
-                            }
-                          }
-                          
-                          const newElImage: any = {
-                            id: imageId,
-                            type: 'image',
-                            src: url,
-                            x: isAutoText ? 640 - 80 : 640,
-                            y: 360,
-                            scale: 1,
-                            rotation: 0,
-                            opacity: 1,
-                            width: targetWidth,
-                            height: targetHeight,
-                            groupId
-                          };
-                          const newElements = [newElImage];
-                          if (isAutoText) {
-                            const textId = crypto.randomUUID();
-                            const newElText: any = {
-                              id: textId,
-                              type: 'text',
-                              text: 'Custom Logo',
-                              x: 640 + 80,
-                              y: 360,
-                              scale: 1,
-                              rotation: 0,
-                              color: '#ffffff',
-                              opacity: 1,
-                              fontSize: 48,
-                              fontFamily: 'Inter',
-                              groupId
-                            };
-                            newElements.push(newElText);
-                          }
-                          setProject(p => ({ ...p, elements: [...p.elements, ...newElements] }));
-                          setSelectedElementId(newElImage.id);
-                        };
-                        img.src = url;
+                        addStaticImage(file);
+                        e.target.value = '';
                       }
                     }}
                   />
-                  <button
-                    onClick={() => document.getElementById('image-upload')?.click()}
-                    className="w-full py-3 bg-[#1A1A1A] border border-blue-500/30 hover:bg-blue-500/10 hover:border-blue-500 text-blue-400 font-bold text-xs rounded-lg flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <ImageIcon size={16} /> UPLOAD GAMBAR / LOGO STATIS
-                  </button>
-                </div>
-                
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Tambah Icon / Sticker</h2>
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input type="checkbox" id="auto-text-checkbox" defaultChecked className="w-3 h-3 rounded bg-[#1A1A1A] border-white/10 text-blue-500 focus:ring-blue-500 cursor-pointer" />
-                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider group-hover:text-gray-300 transition-colors">Teks Otomatis</span>
-                  </label>
-                </div>
-                <div className="grid grid-cols-4 gap-2 mb-8">
-                  {PLATFORM_ICONS.map(icon => (
+
+                  <div className="grid grid-cols-2 gap-2">
                     <button
-                      key={icon.name}
-                      onClick={() => {
-                        const isAutoText = (document.getElementById('auto-text-checkbox') as HTMLInputElement)?.checked ?? true;
-                        
-                        const imageId = crypto.randomUUID();
-                        const groupId = isAutoText ? crypto.randomUUID() : undefined;
-                        const newElImage: any = {
-                          id: imageId,
-                          type: 'image',
-                          src: icon.src,
-                          x: isAutoText ? 640 - 80 : 640,
-                          y: 360,
-                          scale: 1,
-                          rotation: 0,
-                          opacity: 1,
-                          width: 48,
-                          height: 48,
-                          groupId
-                        };
-
-                        const newElements = [newElImage];
-
-                        if (isAutoText) {
-                          const textId = crypto.randomUUID();
-                          const newElText: any = {
-                            id: textId,
-                            type: 'text',
-                            text: icon.name,
-                            x: 640 + 40,
-                            y: 360,
-                            scale: 1,
-                            rotation: 0,
-                            color: '#ffffff',
-                            opacity: 1,
-                            fontSize: 48,
-                            fontFamily: 'Inter',
-                            groupId
-                          };
-                          newElements.push(newElText);
-                        }
-
-                        setProject(p => ({ ...p, elements: [...p.elements, ...newElements] }));
-                        setSelectedElementId(newElImage.id);
-                      }}
-                      className="p-2 bg-[#1A1A1A] border border-white/5 rounded hover:bg-white/10 flex flex-col items-center gap-1 transition-colors"
-                      title={icon.name}
+                      onClick={() => document.getElementById('image-upload')?.click()}
+                      className="py-2.5 px-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 hover:border-blue-500 text-blue-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-all text-left"
                     >
-                      <img src={icon.src} alt={icon.name} className="w-6 h-6 object-contain" />
-                      <span className="text-[8px] text-gray-400 text-center">{icon.name}</span>
+                      <ImageIcon size={14} /> Logo / Gambar PNG
                     </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Layers</h2>
-                  {multiSelectIds.length > 1 && (
-                    <button 
-                      onClick={() => {
-                        const newGroupId = crypto.randomUUID();
-                        setProject(p => ({
-                          ...p,
-                          elements: p.elements.map(e => multiSelectIds.includes(e.id) ? { ...e, groupId: newGroupId } : e)
-                        }));
-                        setMultiSelectIds([]);
-                      }}
-                      className="text-[9px] bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded font-bold"
+                    <button
+                      onClick={addStaticText}
+                      className="py-2.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500 text-emerald-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-all text-left"
                     >
-                      Group Selected
+                      <Type size={14} /> Teks Overlay
                     </button>
-                  )}
-                  {multiSelectIds.length === 1 && project.elements.find(e => e.id === multiSelectIds[0])?.groupId && (
-                     <button 
-                       onClick={() => {
-                         const groupToClear = project.elements.find(e => e.id === multiSelectIds[0])?.groupId;
-                         setProject(p => ({
-                           ...p,
-                           elements: p.elements.map(e => e.groupId === groupToClear ? { ...e, groupId: undefined } : e)
-                         }));
-                         setMultiSelectIds([]);
-                       }}
-                       className="text-[9px] bg-rose-600 hover:bg-rose-500 text-white px-2 py-1 rounded font-bold"
-                     >
-                       Ungroup
-                     </button>
-                  )}
-                </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={addStaticBanner}
+                      className="py-2 px-3 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 hover:border-purple-500 text-purple-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-all text-left"
+                    >
+                      <Zap size={14} /> Banner / Badge
+                    </button>
+                    <button
+                      onClick={() => setOpenStickersAccordion(!openStickersAccordion)}
+                      className="py-2 px-3 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-bold text-[11px] rounded-lg flex items-center justify-between gap-1.5 transition-all"
+                    >
+                      <span className="flex items-center gap-1.5"><Sparkles size={14} className="text-amber-400" /> Stiker & Ikon</span>
+                      <ChevronDown size={12} className={`transition-transform ${openStickersAccordion ? 'rotate-180' : ''}`} />
+                    </button>
+                  </div>
 
-                {project.elements.length === 0 ? (
-                  <p className="text-xs text-gray-500 italic">No elements added.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {project.elements.map(el => (
-                      <div 
-                        key={el.id} 
-                        onClick={() => setSelectedElementId(el.id)}
-                        className={`p-3 rounded-lg border cursor-pointer transition-colors flex justify-between items-center ${
-                          selectedElementId === el.id 
-                            ? 'bg-blue-500/10 border-blue-500/50' 
-                            : 'bg-white/5 border-white/5 hover:border-white/20'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <input 
-                            type="checkbox"
-                            checked={multiSelectIds.includes(el.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              if (e.target.checked) setMultiSelectIds(p => [...p, el.id]);
-                              else setMultiSelectIds(p => p.filter(id => id !== el.id));
+                  {openStickersAccordion && (
+                    <div className="pt-2 border-t border-white/5 mt-2">
+                      <div className="grid grid-cols-4 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                        {PLATFORM_ICONS.map(icon => (
+                          <button
+                            key={icon.name}
+                            onClick={() => {
+                              const imageId = crypto.randomUUID();
+                              const newElImage: any = {
+                                id: imageId,
+                                type: 'image',
+                                name: `${icon.name} Icon`,
+                                src: icon.src,
+                                x: 640,
+                                y: 360,
+                                scale: 1,
+                                rotation: 0,
+                                opacity: 1,
+                                width: 48,
+                                height: 48,
+                              };
+                              setProject(p => ({ ...p, elements: [...p.elements, newElImage] }));
+                              setSelectedElementId(newElImage.id);
                             }}
-                            className="w-3 h-3 rounded bg-[#1A1A1A] border-white/10 text-blue-500"
-                          />
-                          <span className="font-medium text-xs text-white capitalize">
-                            {el.type.replace('_', ' ')}
-                          </span>
-                          {el.groupId && (
-                            <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded ml-2">
-                              Grouped
-                            </span>
+                            className="p-1.5 bg-[#1A1A1A] border border-white/5 rounded-md hover:bg-white/10 flex flex-col items-center gap-1 transition-colors"
+                            title={icon.name}
+                          >
+                            <img src={icon.src} alt={icon.name} className="w-5 h-5 object-contain" />
+                            <span className="text-[7.5px] text-gray-400 text-center truncate w-full">{icon.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Layer Stacking Header & Batch Operations */}
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold flex items-center gap-1">
+                      <Layers size={12} className="text-blue-400" /> Lapisan Canvas ({project.elements.length})
+                    </h2>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {multiSelectIds.length > 1 && (
+                      <button 
+                        onClick={() => {
+                          const newGroupId = crypto.randomUUID();
+                          setProject(p => ({
+                            ...p,
+                            elements: p.elements.map(e => multiSelectIds.includes(e.id) ? { ...e, groupId: newGroupId } : e)
+                          }));
+                          setMultiSelectIds([]);
+                        }}
+                        className="text-[9px] bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded font-bold transition-colors"
+                      >
+                        Group ({multiSelectIds.length})
+                      </button>
+                    )}
+                    {multiSelectIds.length === 1 && project.elements.find(e => e.id === multiSelectIds[0])?.groupId && (
+                      <button 
+                        onClick={() => {
+                          const groupToClear = project.elements.find(e => e.id === multiSelectIds[0])?.groupId;
+                          setProject(p => ({
+                            ...p,
+                            elements: p.elements.map(e => e.groupId === groupToClear ? { ...e, groupId: undefined } : e)
+                          }));
+                          setMultiSelectIds([]);
+                        }}
+                        className="text-[9px] bg-rose-600 hover:bg-rose-500 text-white px-2 py-1 rounded font-bold transition-colors"
+                      >
+                        Ungroup
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-[9.5px] text-gray-500 px-1 flex items-center justify-between">
+                  <span>* Lapisan teratas tampil paling depan di layar kanvas</span>
+                </div>
+
+                {/* Reordered Layer List (Top-most visual element rendered at the top of the UI list) */}
+                {project.elements.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
+                    <Layers size={24} className="text-gray-600 mb-2" />
+                    <p className="text-xs text-gray-400 font-medium">Belum ada layer elemen</p>
+                    <p className="text-[10px] text-gray-600 mt-1">Tambahkan visualizer, teks overlay, atau logo di atas.</p>
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-1 no-scrollbar">
+                    {[...project.elements].map((el, originalIndex) => ({ el, originalIndex })).reverse().map(({ el, originalIndex }) => {
+                      const isSelected = selectedElementId === el.id;
+                      const isTop = originalIndex === project.elements.length - 1;
+                      const isBottom = originalIndex === 0;
+
+                      return (
+                        <div 
+                          key={el.id} 
+                          onClick={() => setSelectedElementId(el.id)}
+                          className={`p-2.5 rounded-xl border transition-all cursor-pointer relative group ${
+                            isSelected 
+                              ? 'bg-blue-600/10 border-blue-500/60 shadow-lg shadow-blue-500/5' 
+                              : 'bg-[#141418] border-white/5 hover:border-white/20 hover:bg-white/[0.04]'
+                          } ${el.hidden ? 'opacity-50' : ''}`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            {/* Left: Checkbox & Name */}
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <input 
+                                type="checkbox"
+                                checked={multiSelectIds.includes(el.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  if (e.target.checked) setMultiSelectIds(p => [...p, el.id]);
+                                  else setMultiSelectIds(p => p.filter(id => id !== el.id));
+                                }}
+                                className="w-3.5 h-3.5 rounded bg-black/40 border-white/20 text-blue-500 focus:ring-0 cursor-pointer"
+                              />
+
+                              <div className="p-1 rounded bg-black/40 border border-white/10 shrink-0">
+                                {el.type === 'image' && <ImageIcon size={12} className="text-amber-400" />}
+                                {(el.type === 'text' || el.type === 'sticker_text') && <Type size={12} className="text-emerald-400" />}
+                                {el.type === 'subtitle' && <Type size={12} className="text-cyan-400" />}
+                                {(el.type === 'banner' || el.type === 'bracket_banner') && <Zap size={12} className="text-purple-400" />}
+                                {(el.type === 'bars' || el.type === 'mirrored_bars' || el.type === 'symmetrical_mirror') && <Radio size={12} className="text-blue-400" />}
+                                {(el.type === 'circle' || el.type === 'double_circle' || el.type === 'circular_spectrum') && <Activity size={12} className="text-indigo-400" />}
+                                {(el.type === 'particles' || el.type === 'orbs' || el.type === 'water_splash' || el.type === 'spiral_galaxy') && <Sparkles size={12} className="text-rose-400" />}
+                                {!['image', 'text', 'sticker_text', 'subtitle', 'banner', 'bracket_banner', 'bars', 'mirrored_bars', 'symmetrical_mirror', 'circle', 'double_circle', 'circular_spectrum', 'particles', 'orbs', 'water_splash', 'spiral_galaxy'].includes(el.type) && (
+                                  <Sliders size={12} className="text-blue-400" />
+                                )}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-semibold text-xs text-white truncate">
+                                    {el.name || (el.type === 'bracket_banner' ? 'Bracket Banner' : el.type.replace('_', ' '))}
+                                  </span>
+                                  {el.groupId && (
+                                    <span className="text-[8px] bg-blue-500/20 text-blue-400 px-1 py-0.2 rounded shrink-0">
+                                      Group
+                                    </span>
+                                  )}
+                                  {el.blendMode && el.blendMode !== 'source-over' && (
+                                    <span className="text-[8px] bg-purple-500/20 text-purple-300 px-1 py-0.2 rounded font-mono uppercase shrink-0">
+                                      {el.blendMode}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                                  <span>Layer #{originalIndex + 1}</span>
+                                  <span>•</span>
+                                  <span>Opasitas {Math.round((el.opacity ?? 1) * 100)}%</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right: Layer Stacking & Visibility Controls */}
+                            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              {/* Move Layer Up (Bring Forward) */}
+                              <button
+                                onClick={() => moveLayerUp(el.id)}
+                                disabled={isTop}
+                                title="Naikkan Layer (Maju ke Depan)"
+                                className={`p-1 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors ${isTop ? 'opacity-20 cursor-not-allowed' : ''}`}
+                              >
+                                <ArrowUp size={13} />
+                              </button>
+
+                              {/* Move Layer Down (Send Backward) */}
+                              <button
+                                onClick={() => moveLayerDown(el.id)}
+                                disabled={isBottom}
+                                title="Turunkan Layer (Mundur ke Belakang)"
+                                className={`p-1 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors ${isBottom ? 'opacity-20 cursor-not-allowed' : ''}`}
+                              >
+                                <ArrowDown size={13} />
+                              </button>
+
+                              {/* Lock Toggle */}
+                              <button
+                                onClick={() => toggleLock(el.id)}
+                                title={el.locked ? "Buka Kunci Posisi" : "Kunci Posisi di Canvas"}
+                                className={`p-1 rounded transition-colors ${el.locked ? 'text-amber-400 bg-amber-500/10' : 'text-gray-500 hover:text-white hover:bg-white/10'}`}
+                              >
+                                {el.locked ? <Lock size={13} /> : <Unlock size={13} />}
+                              </button>
+
+                              {/* Hide Toggle */}
+                              <button
+                                onClick={() => toggleHide(el.id)}
+                                title={el.hidden ? "Tampilkan Elemen" : "Sembunyikan Elemen"}
+                                className={`p-1 rounded transition-colors ${el.hidden ? 'text-rose-400 bg-rose-500/10' : 'text-gray-500 hover:text-white hover:bg-white/10'}`}
+                              >
+                                {el.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+                              </button>
+
+                              {/* Duplicate */}
+                              <button
+                                onClick={() => duplicateElement(el.id)}
+                                title="Duplikasi Layer"
+                                className="p-1 rounded text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                              >
+                                <Copy size={13} />
+                              </button>
+
+                              {/* Remove */}
+                              <button 
+                                onClick={() => removeElement(el.id)} 
+                                title="Hapus Layer"
+                                className="p-1 rounded text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Inline Opacity Quick Slider when Selected */}
+                          {isSelected && (
+                            <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                              <span className="text-[9px] text-gray-400 font-medium shrink-0">Opasitas:</span>
+                              <input 
+                                type="range" 
+                                min="0" 
+                                max="1" 
+                                step="0.05" 
+                                value={el.opacity ?? 1} 
+                                onChange={e => updateElement(el.id, { opacity: Number(e.target.value) })} 
+                                className="flex-1 h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-blue-500" 
+                              />
+                              <span className="text-[9.5px] font-mono text-blue-400 shrink-0 w-8 text-right font-bold">
+                                {Math.round((el.opacity ?? 1) * 100)}%
+                              </span>
+                            </div>
                           )}
                         </div>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); removeElement(el.id); }} 
-                          className="text-gray-400 hover:text-rose-400 p-1"
-                        >
-                          <Trash2 size={14}/>
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1595,9 +1822,29 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
             return (
               <div className="p-6 space-y-8">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <h2 className="text-sm font-semibold text-white capitalize mb-1">{el.type} Element</h2>
-                    <span className="inline-block px-2 py-1 bg-indigo-500/20 text-indigo-400 text-[10px] font-bold rounded uppercase tracking-wider">VISUALIZER</span>
+                  <div className="flex-1 pr-2">
+                    <input 
+                      type="text"
+                      value={el.name || (el.type === 'bracket_banner' ? 'Bracket Banner' : el.type.replace('_', ' '))}
+                      onChange={e => updateElement(el.id, { name: e.target.value })}
+                      placeholder="Nama Layer..."
+                      className="text-sm font-semibold text-white bg-transparent border-b border-transparent hover:border-white/20 focus:border-indigo-500 focus:outline-none mb-1 w-full truncate"
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-[9px] font-bold rounded uppercase tracking-wider">
+                        {el.type.replace('_', ' ')}
+                      </span>
+                      {el.locked && (
+                        <span className="inline-block px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[8px] font-bold rounded">
+                          LOCKED
+                        </span>
+                      )}
+                      {el.hidden && (
+                        <span className="inline-block px-1.5 py-0.5 bg-rose-500/20 text-rose-400 text-[8px] font-bold rounded">
+                          HIDDEN
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {el.groupId && (
                     <button 
@@ -1608,11 +1855,140 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                           elements: p.elements.map(e => e.groupId === groupId ? { ...e, groupId: undefined } : e)
                         }));
                       }}
-                      className="text-[9px] bg-rose-600 hover:bg-rose-500 text-white px-2 py-1 rounded font-bold"
+                      className="text-[9px] bg-rose-600 hover:bg-rose-500 text-white px-2 py-1 rounded font-bold shrink-0"
                     >
                       UNGROUP
                     </button>
                   )}
+                </div>
+
+                {/* LAYER MANAGEMENT & BLEND MODE */}
+                <div className="space-y-4 p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                  <h3 className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold flex items-center gap-2">
+                    <Layers size={12} className="text-blue-400" /> Tumpukan & Efek Layer
+                  </h3>
+
+                  {/* Z-Order Buttons */}
+                  <div>
+                    <span className="text-[9.5px] text-gray-400 mb-1.5 block">Urutan Tumpukan Kanvas:</span>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      <button
+                        onClick={() => bringToFront(el.id)}
+                        className="p-1.5 bg-[#1A1A1A] hover:bg-blue-600/20 hover:border-blue-500/50 border border-white/5 rounded text-[9.5px] text-gray-300 hover:text-white flex flex-col items-center gap-1 transition-colors"
+                        title="Pindah ke lapisan paling depan (teratas)"
+                      >
+                        <ChevronsUp size={12} className="text-blue-400" />
+                        <span>Paling Depan</span>
+                      </button>
+                      <button
+                        onClick={() => moveLayerUp(el.id)}
+                        className="p-1.5 bg-[#1A1A1A] hover:bg-blue-600/20 hover:border-blue-500/50 border border-white/5 rounded text-[9.5px] text-gray-300 hover:text-white flex flex-col items-center gap-1 transition-colors"
+                        title="Naikkan 1 tingkat ke depan"
+                      >
+                        <ChevronUp size={12} className="text-blue-400" />
+                        <span>Maju 1</span>
+                      </button>
+                      <button
+                        onClick={() => moveLayerDown(el.id)}
+                        className="p-1.5 bg-[#1A1A1A] hover:bg-blue-600/20 hover:border-blue-500/50 border border-white/5 rounded text-[9.5px] text-gray-300 hover:text-white flex flex-col items-center gap-1 transition-colors"
+                        title="Turunkan 1 tingkat ke belakang"
+                      >
+                        <ChevronDown size={12} className="text-blue-400" />
+                        <span>Mundur 1</span>
+                      </button>
+                      <button
+                        onClick={() => sendToBack(el.id)}
+                        className="p-1.5 bg-[#1A1A1A] hover:bg-blue-600/20 hover:border-blue-500/50 border border-white/5 rounded text-[9.5px] text-gray-300 hover:text-white flex flex-col items-center gap-1 transition-colors"
+                        title="Pindah ke lapisan paling belakang (terbawah)"
+                      >
+                        <ChevronsDown size={12} className="text-blue-400" />
+                        <span>Paling Belakang</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Mode Pencampuran (Blend Mode) */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[9.5px] text-gray-400">Mode Pencampuran (Blend Mode)</span>
+                      <span className="text-[9px] font-mono text-purple-400 uppercase">{el.blendMode || 'normal'}</span>
+                    </div>
+                    <select
+                      value={el.blendMode || 'source-over'}
+                      onChange={e => updateElement(el.id, { blendMode: e.target.value as any })}
+                      className="w-full bg-black/60 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 cursor-pointer"
+                    >
+                      <option value="source-over">Normal (Standar)</option>
+                      <option value="screen">Screen (Efek Cahaya / Glow)</option>
+                      <option value="overlay">Overlay (Kontras Sinematik)</option>
+                      <option value="lighter">Lighter (Additive Glow)</option>
+                      <option value="color-dodge">Color Dodge (Neon Intens)</option>
+                      <option value="lighten">Lighten (Pencerahan)</option>
+                      <option value="multiply">Multiply (Gelap / Shadow)</option>
+                      <option value="soft-light">Soft Light (Cahaya Lembut)</option>
+                      <option value="hard-light">Hard Light (Cahaya Kontras)</option>
+                      <option value="difference">Difference (Inversi Artistik)</option>
+                    </select>
+                  </div>
+
+                  {/* Opacity Control with quick presets */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[9.5px] text-gray-400">Transparansi / Opasitas</span>
+                      <span className="text-[10px] font-bold text-blue-400">{Math.round((el.opacity ?? 1) * 100)}%</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="1" 
+                      step="0.01" 
+                      value={el.opacity ?? 1} 
+                      onChange={e => updateElement(el.id, { opacity: Number(e.target.value) })} 
+                      className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-blue-500" 
+                    />
+                    <div className="grid grid-cols-4 gap-1 mt-1.5">
+                      {[0.25, 0.50, 0.75, 1.0].map(val => (
+                        <button
+                          key={val}
+                          onClick={() => updateElement(el.id, { opacity: val })}
+                          className={`py-0.5 rounded text-[8.5px] font-mono border transition-colors ${
+                            Math.abs((el.opacity ?? 1) - val) < 0.02
+                              ? 'bg-blue-600/30 border-blue-500 text-white'
+                              : 'bg-black/30 border-white/5 text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          {val * 100}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Lock & Hide toggles */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      onClick={() => toggleLock(el.id)}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all ${
+                        el.locked 
+                          ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' 
+                          : 'bg-[#1A1A1A] border-white/10 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {el.locked ? <Lock size={12} /> : <Unlock size={12} />}
+                      <span>{el.locked ? 'Terkunci' : 'Kunci Posisi'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => toggleHide(el.id)}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all ${
+                        el.hidden 
+                          ? 'bg-rose-500/20 border-rose-500/50 text-rose-300' 
+                          : 'bg-[#1A1A1A] border-white/10 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {el.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                      <span>{el.hidden ? 'Tersembunyi' : 'Tampilkan'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Transform */}
@@ -1641,12 +2017,6 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                       <span className="text-[10px] text-gray-500">Rotasi ({el.rotation || 0}°)</span>
                     </div>
                     <input type="range" min="-180" max="180" value={el.rotation || 0} onChange={e => updateElement(el.id, { rotation: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
-                  </label>
-                  <label className="block">
-                    <div className="flex justify-between mb-1">
-                      <span className="text-[10px] text-gray-500">Opasitas ({Math.round(el.opacity * 100)}%)</span>
-                    </div>
-                    <input type="range" min="0" max="1" step="0.05" value={el.opacity ?? 1} onChange={e => updateElement(el.id, { opacity: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
                   </label>
                 </div>
 

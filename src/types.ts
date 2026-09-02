@@ -100,15 +100,31 @@ export type ElementType =
   | "progress_visualizer"
   | "water_splash"
   | "bracket_banner";
+export type BlendModeType =
+  | "source-over"
+  | "screen"
+  | "overlay"
+  | "lighten"
+  | "multiply"
+  | "color-dodge"
+  | "lighter"
+  | "hard-light"
+  | "soft-light"
+  | "difference";
+
 export interface BaseElement {
   id: string;
   type: ElementType;
+  name?: string;
   x: number;
   y: number;
   scale: number;
   rotation: number;
   color: string;
   opacity: number;
+  blendMode?: BlendModeType;
+  locked?: boolean;
+  hidden?: boolean;
   useGradient?: boolean;
   color2?: string;
   startTime?: number; // Start time in seconds

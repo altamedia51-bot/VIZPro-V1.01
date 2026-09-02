@@ -68,6 +68,8 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
     const ctx = canvas?.getContext('2d');
     
     for (const el of elements) {
+      // Skip hidden elements in pointer interaction
+      if (el.hidden) continue;
       // Hit test only active elements
       if (el.startTime !== undefined && currentTime < el.startTime) continue;
       if (el.endTime !== undefined && currentTime > el.endTime) continue;
@@ -132,8 +134,10 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
       }
       
       if (hit) {
-        setDraggingId(el.id);
-        dragOffset.current = { x: x - el.x, y: y - el.y };
+        if (!el.locked) {
+          setDraggingId(el.id);
+          dragOffset.current = { x: x - el.x, y: y - el.y };
+        }
         if (onSelectElement) onSelectElement(el.id);
         return;
       }
@@ -456,11 +460,18 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
       // Draw Elements
       if (project?.elements) {
         for (const el of project.elements) {
+          // Skip if element is hidden by layer control
+          if (el.hidden) continue;
+
           // Skip if element is not active at current time
           if (el.startTime !== undefined && currentTimeRef.current < el.startTime) continue;
           if (el.endTime !== undefined && currentTimeRef.current > el.endTime) continue;
 
           ctx.save();
+
+          if (el.blendMode) {
+            ctx.globalCompositeOperation = el.blendMode;
+          }
 
           // Element Motion Presets Calculation
           let animScale = 1.0;
