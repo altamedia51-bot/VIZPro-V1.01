@@ -6,7 +6,7 @@ import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { Timeline } from './Timeline';
 import { useAudioAnalyzer } from '../hooks/useAudioAnalyzer';
 import { Recorder } from '../utils/recordStream';
-import { Play, Pause, SkipBack, Square, Plus, Image as ImageIcon, Download, Trash2, Home, Music, Radio, Type, Sparkles, Layers, Search, Volume2, VolumeX, ChevronDown, FolderOpen, Undo2, Redo2, FileCode, Maximize2, Settings as SettingsIcon, CheckCircle2, Cpu, Settings, Database, Activity, Wind, Zap, Move } from 'lucide-react';
+import { Play, Pause, SkipBack, Square, Plus, Image as ImageIcon, Download, Trash2, Home, Music, Radio, Type, Sparkles, Layers, Search, Volume2, VolumeX, ChevronDown, FolderOpen, Undo2, Redo2, FileCode, Maximize2, Settings as SettingsIcon, CheckCircle2, Cpu, Settings, Database, Activity, Wind, Zap, Move, Camera } from 'lucide-react';
 import { parseSRT } from '../utils/srtParser';
 import { db } from '../lib/db';
 
@@ -409,6 +409,21 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
     }
   };
 
+  const takeSnapshot = () => {
+    const canvas = rendererRef.current?.getCanvas();
+    if (!canvas) return;
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      const timestamp = formatTime(currentTime).replace(/:/g, '-');
+      a.download = `${project.name.replace(/\s+/g, '_')}_snapshot_${timestamp}.png`;
+      a.click();
+    } catch (err) {
+      console.error('Failed to capture snapshot:', err);
+    }
+  };
+
   const stopRecording = async () => {
     if (recorderRef.current) {
       const blob = await recorderRef.current.stop();
@@ -546,6 +561,15 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
           </div>
 
 
+
+          <button 
+            onClick={takeSnapshot}
+            title="Ambil Snapshot/Screenshot Canvas (PNG)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold tracking-wide border border-[#333] bg-[#1a1a1a] hover:bg-[#252525] text-gray-200 hover:text-white transition-colors"
+          >
+            <Camera size={14} className="text-cyan-400" />
+            <span>SNAPSHOT</span>
+          </button>
 
           <button 
             onClick={toggleRecording}
@@ -1559,6 +1583,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
             selectedElementId={selectedElementId}
             onSelectElement={setSelectedElementId}
             onUpdateElement={updateElement}
+            onTakeSnapshot={takeSnapshot}
           />
         </main>
 

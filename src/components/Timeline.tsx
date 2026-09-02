@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, SkipBack, Scissors, Bookmark, ZoomIn, ZoomOut, Volume2, VolumeX, Eye, EyeOff } from 'lucide-react';
+import { Play, Pause, SkipBack, Scissors, Bookmark, ZoomIn, ZoomOut, Volume2, VolumeX, Eye, EyeOff, Camera } from 'lucide-react';
 import { Project } from '../types';
 
 interface TimelineProps {
@@ -13,6 +13,7 @@ interface TimelineProps {
   selectedElementId: string | null;
   onSelectElement: (id: string | null) => void;
   onUpdateElement?: (id: string, updates: any) => void;
+  onTakeSnapshot?: () => void;
 }
 
 export const Timeline: React.FC<TimelineProps> = ({
@@ -25,7 +26,8 @@ export const Timeline: React.FC<TimelineProps> = ({
   audioUrl,
   selectedElementId,
   onSelectElement,
-  onUpdateElement
+  onUpdateElement,
+  onTakeSnapshot
 }) => {
   const [zoom, setZoom] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -104,12 +106,21 @@ export const Timeline: React.FC<TimelineProps> = ({
            </div>
            
            <div className="flex items-center gap-1">
-             <button onClick={() => onSeek(0)} disabled={!audioUrl} className="p-1 text-gray-400 hover:text-white disabled:opacity-50">
+             <button onClick={() => onSeek(0)} disabled={!audioUrl} className="p-1 text-gray-400 hover:text-white disabled:opacity-50" title="Rewind to Start">
                <SkipBack size={16} />
              </button>
-             <button onClick={onTogglePlay} disabled={!audioUrl} className="p-1 text-gray-400 hover:text-white disabled:opacity-50">
+             <button onClick={onTogglePlay} disabled={!audioUrl} className="p-1 text-gray-400 hover:text-white disabled:opacity-50" title={isPlaying ? "Pause" : "Play"}>
                {isPlaying ? <Pause size={16} /> : <Play size={16} />}
              </button>
+             {onTakeSnapshot && (
+               <button 
+                 onClick={onTakeSnapshot} 
+                 className="p-1 text-gray-400 hover:text-cyan-400 transition-colors ml-1" 
+                 title="Ambil Snapshot / Screenshot Canvas (PNG)"
+               >
+                 <Camera size={16} />
+               </button>
+             )}
            </div>
            
            {/* Zoom Controls */}
