@@ -82,6 +82,7 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
   const [multiSelectIds, setMultiSelectIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('visualizer');
   const [openBgAccordion, setOpenBgAccordion] = useState<string>('type');
+  const [openOverlayGrafisAccordion, setOpenOverlayGrafisAccordion] = useState(true);
   const [openVizAccordion, setOpenVizAccordion] = useState<string>('spectrum');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('spectrum');
@@ -1624,57 +1625,63 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
             {activeTab === 'layers' && (
               <div className="flex flex-col h-full overflow-hidden p-4 space-y-4">
                 {/* Overlay Creation Actions */}
-                <div className="bg-[#141418] border border-white/5 rounded-xl p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold flex items-center gap-1.5">
-                      <Plus size={12} className="text-blue-400" /> Tambah Elemen Overlay
-                    </h2>
-                  </div>
+                <div className="border-b border-white/5 pb-4">
+                  <button 
+                    onClick={() => setOpenOverlayGrafisAccordion(!openOverlayGrafisAccordion)} 
+                    className="w-full flex items-center justify-between group outline-none"
+                  >
+                    <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2 mb-4 group-hover:text-gray-300 transition-colors">
+                      <Sparkles size={12} /> OVERLAY & GRAFIS
+                    </h3>
+                    <ChevronDown size={14} className={`text-gray-500 mb-4 transition-transform ${openOverlayGrafisAccordion ? 'rotate-180' : ''}`} />
+                  </button>
 
-                  <input
-                    type="file"
-                    accept="image/png, image/jpeg, image/webp, image/svg+xml"
-                    id="image-upload"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        addStaticImage(file);
-                        e.target.value = '';
-                      }
-                    }}
-                  />
+                  {openOverlayGrafisAccordion && (
+                    <div className="space-y-2">
+                      <input
+                        type="file"
+                        accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                        id="image-upload"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            addStaticImage(file);
+                            e.target.value = '';
+                          }
+                        }}
+                      />
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => document.getElementById('image-upload')?.click()}
-                      className="py-2.5 px-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 hover:border-blue-500 text-blue-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-all text-left"
-                    >
-                      <ImageIcon size={14} /> Logo / Gambar PNG
-                    </button>
-                    <button
-                      onClick={addStaticText}
-                      className="py-2.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500 text-emerald-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-all text-left"
-                    >
-                      <Type size={14} /> Teks Overlay
-                    </button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={addStaticBanner}
-                      className="py-2 px-3 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 hover:border-purple-500 text-purple-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-all text-left"
-                    >
-                      <Zap size={14} /> Banner / Badge
-                    </button>
-                    <button
-                      onClick={() => setOpenStickersAccordion(!openStickersAccordion)}
-                      className="py-2 px-3 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-bold text-[11px] rounded-lg flex items-center justify-between gap-1.5 transition-all"
-                    >
-                      <span className="flex items-center gap-1.5"><Sparkles size={14} className="text-amber-400" /> Stiker & Ikon</span>
-                      <ChevronDown size={12} className={`transition-transform ${openStickersAccordion ? 'rotate-180' : ''}`} />
-                    </button>
-                  </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => document.getElementById('image-upload')?.click()}
+                          className="py-2.5 px-3 bg-[#1A1A1A] hover:bg-[#2A2A2A] border border-white/10 hover:border-white/20 text-blue-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-all"
+                        >
+                          <ImageIcon size={14} /> Gambar PNG
+                        </button>
+                        <button
+                          onClick={addStaticText}
+                          className="py-2.5 px-3 bg-[#1A1A1A] hover:bg-[#2A2A2A] border border-white/10 hover:border-white/20 text-emerald-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-all"
+                        >
+                          <Type size={14} /> Teks Overlay
+                        </button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={addStaticBanner}
+                          className="py-2 px-3 bg-[#1A1A1A] hover:bg-[#2A2A2A] border border-white/10 hover:border-white/20 text-purple-400 font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-all"
+                        >
+                          <Zap size={14} /> Banner / Badge
+                        </button>
+                        <button
+                          onClick={() => setOpenStickersAccordion(!openStickersAccordion)}
+                          className="py-2 px-3 bg-[#1A1A1A] hover:bg-[#2A2A2A] border border-white/10 hover:border-white/20 text-amber-400 font-bold text-[11px] rounded-lg flex items-center justify-between gap-1.5 transition-all"
+                        >
+                          <span className="flex items-center gap-1.5"><Sparkles size={14} /> Stiker / Ikon</span>
+                          <ChevronDown size={12} className={`transition-transform ${openStickersAccordion ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
 
                   {openStickersAccordion && (
                     <div className="pt-2 border-t border-white/5 mt-2">
@@ -1708,6 +1715,8 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                           </button>
                         ))}
                       </div>
+                    </div>
+                  )}
                     </div>
                   )}
                 </div>
