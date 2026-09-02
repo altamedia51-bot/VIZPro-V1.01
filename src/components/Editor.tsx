@@ -6,7 +6,7 @@ import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { Timeline } from './Timeline';
 import { useAudioAnalyzer } from '../hooks/useAudioAnalyzer';
 import { Recorder } from '../utils/recordStream';
-import { Play, Pause, SkipBack, Square, Plus, Image as ImageIcon, Download, Trash2, Home, Music, Radio, Type, Sparkles, Layers, Search, Volume2, VolumeX, ChevronDown, FolderOpen, Undo2, Redo2, FileCode, Maximize2, Settings as SettingsIcon, CheckCircle2, Cpu, Settings, Database } from 'lucide-react';
+import { Play, Pause, SkipBack, Square, Plus, Image as ImageIcon, Download, Trash2, Home, Music, Radio, Type, Sparkles, Layers, Search, Volume2, VolumeX, ChevronDown, FolderOpen, Undo2, Redo2, FileCode, Maximize2, Settings as SettingsIcon, CheckCircle2, Cpu, Settings, Database, Activity, Wind, Zap, Move } from 'lucide-react';
 import { parseSRT } from '../utils/srtParser';
 import { db } from '../lib/db';
 
@@ -626,8 +626,45 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                 <input type="file" id="hidden-bg-image-upload" accept="image/*" className="hidden" onChange={handleBgUpload} />
                 <input type="file" id="hidden-bg-video-upload" accept="video/*" className="hidden" onChange={handleBgUpload} />
                 <div className="flex-1 overflow-y-auto pr-1 space-y-6">
-                  {/* Tipe Background */}
+                  {/* Preset Background Unggulan */}
                   <div>
+                    <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2 mb-3">
+                      <Sparkles size={12} className="text-amber-400" /> PRESET LATAR BELAKANG
+                    </h3>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => {
+                          setProject({
+                            ...project,
+                            backgroundConfig: {
+                              ...project.backgroundConfig,
+                              type: 'image',
+                              value: '/neon_wave_terrain.jpg'
+                            }
+                          });
+                        }}
+                        className={`w-full group relative overflow-hidden rounded-xl border p-2.5 flex items-center gap-3 transition-all ${
+                          project.backgroundConfig.type === 'image' && project.backgroundConfig.value === '/neon_wave_terrain.jpg'
+                            ? 'bg-blue-600/20 border-blue-500 shadow-lg shadow-blue-500/20'
+                            : 'bg-[#1A1A1A] border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="w-14 h-9 rounded-lg overflow-hidden shrink-0 border border-white/10 bg-black">
+                          <img src="/neon_wave_terrain.jpg" alt="Neon Particle Soundwave" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        </div>
+                        <div className="text-left flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-white truncate">Neon Particle Terrain</span>
+                            <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-mono font-medium">Clean HD</span>
+                          </div>
+                          <p className="text-[10px] text-gray-400 truncate mt-0.5">Gelombang partikel neon sinematik (tanpa teks)</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Tipe Background */}
+                  <div className="pt-4 border-t border-white/5">
                     <button onClick={() => setOpenBgAccordion(openBgAccordion === 'type' ? '' : 'type')} className="w-full flex items-center justify-between group outline-none">
                       <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2 mb-4 group-hover:text-gray-300 transition-colors">
                         <Settings size={12} /> TIPE BACKGROUND
@@ -742,6 +779,98 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                           </>
                         )}
                       </div>
+                    </div>
+                    )}
+                  </div>
+
+                  {/* Motion Presets Library (Animasi Latar Belakang) */}
+                  <div className="pt-4 border-t border-white/5">
+                    <button onClick={() => setOpenBgAccordion(openBgAccordion === 'motion' ? '' : 'motion')} className="w-full flex items-center justify-between group outline-none">
+                      <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2 mb-4 group-hover:text-gray-300 transition-colors">
+                        <Activity size={12} className="text-cyan-400" /> MOTION PRESETS
+                      </h3>
+                      <ChevronDown size={14} className={`text-gray-500 mb-4 transition-transform ${openBgAccordion === 'motion' ? 'rotate-180' : ''}`} />
+                    </button>
+                    {openBgAccordion === 'motion' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: 'none', name: 'Statis (Diam)', desc: 'Tanpa animasi latar' },
+                          { id: 'pulse', name: 'Bass Pulse', desc: 'Denyut hentakan bass' },
+                          { id: 'drift', name: 'Parallax Drift', desc: 'Ken Burns pan sinematik' },
+                          { id: 'slide', name: 'Slide & Pan', desc: 'Geser osilasi ritmis' },
+                          { id: 'fade', name: 'Breathing Fade', desc: 'Pendaran cahaya lembut' },
+                          { id: 'zoom_burst', name: 'Zoom Burst', desc: 'Hentakan zoom audio drop' },
+                          { id: 'shake', name: 'Camera Shake', desc: 'Guncangan sub-bass dinamis' },
+                        ].map(preset => (
+                          <button
+                            key={preset.id}
+                            onClick={() => {
+                              setProject({
+                                ...project,
+                                backgroundConfig: {
+                                  ...project.backgroundConfig,
+                                  motionPreset: preset.id as any
+                                }
+                              });
+                            }}
+                            className={`p-2.5 border rounded-xl text-left transition-all flex flex-col justify-between min-h-[58px] ${
+                              (project.backgroundConfig.motionPreset || 'none') === preset.id
+                                ? 'bg-cyan-500/20 border-cyan-400 text-white shadow-lg shadow-cyan-500/10'
+                                : 'bg-[#1A1A1A] border-white/5 text-gray-400 hover:bg-white/10'
+                            }`}
+                          >
+                            <span className="text-xs font-bold text-white">{preset.name}</span>
+                            <span className="text-[9px] text-gray-400 mt-0.5 line-clamp-1">{preset.desc}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {project.backgroundConfig.motionPreset && project.backgroundConfig.motionPreset !== 'none' && (
+                        <div className="space-y-3 pt-3 border-t border-white/5">
+                          <label className="block">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-[10px] text-gray-400">Intensitas Efek Gerakan</span>
+                              <span className="text-[10px] text-cyan-400 font-bold">{project.backgroundConfig.motionIntensity ?? 50}%</span>
+                            </div>
+                            <input 
+                              type="range" 
+                              min="10" 
+                              max="100" 
+                              value={project.backgroundConfig.motionIntensity ?? 50} 
+                              onChange={e => setProject({
+                                ...project,
+                                backgroundConfig: {
+                                  ...project.backgroundConfig,
+                                  motionIntensity: Number(e.target.value)
+                                }
+                              })} 
+                              className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-400" 
+                            />
+                          </label>
+                          <label className="block">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-[10px] text-gray-400">Kecepatan Gerakan (Speed)</span>
+                              <span className="text-[10px] text-cyan-400 font-bold">{(project.backgroundConfig.motionSpeed ?? 1.0).toFixed(1)}x</span>
+                            </div>
+                            <input 
+                              type="range" 
+                              min="0.2" 
+                              max="3.0" 
+                              step="0.1"
+                              value={project.backgroundConfig.motionSpeed ?? 1.0} 
+                              onChange={e => setProject({
+                                ...project,
+                                backgroundConfig: {
+                                  ...project.backgroundConfig,
+                                  motionSpeed: Number(e.target.value)
+                                }
+                              })} 
+                              className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-cyan-400" 
+                            />
+                          </label>
+                        </div>
+                      )}
                     </div>
                     )}
                   </div>
@@ -1494,6 +1623,71 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                     </div>
                     <input type="range" min="0" max="1" step="0.05" value={el.opacity ?? 1} onChange={e => updateElement(el.id, { opacity: Number(e.target.value) })} className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" />
                   </label>
+                </div>
+
+                {/* MOTION PRESETS (ANIMASI GELOMBANG & ELEMEN) */}
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                  <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2">
+                    <Activity size={12} className="text-indigo-400" /> Motion Presets & Transisi
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'none', name: 'Statis', desc: 'Tanpa animasi' },
+                      { id: 'pulse', name: 'Bass Pulse', desc: 'Denyut beat bass' },
+                      { id: 'floating_sine', name: 'Floating Sine', desc: 'Melayang naik-turun' },
+                      { id: 'slide', name: 'Slide & Glide', desc: 'Geser osilasi ritmis' },
+                      { id: 'fade', name: 'Breathing Fade', desc: 'Kelap-kelip pudar' },
+                      { id: 'glow_pulse', name: 'Glow Pulse', desc: 'Denyut pendar cahaya' },
+                      { id: 'bounce', name: 'Beat Bounce', desc: 'Lompatan ritme beat' },
+                    ].map(preset => (
+                      <button
+                        key={preset.id}
+                        onClick={() => updateElement(el.id, { motionPreset: preset.id as any })}
+                        className={`p-2 border rounded-lg text-left transition-all flex flex-col justify-between min-h-[50px] ${
+                          (el.motionPreset || 'none') === preset.id
+                            ? 'bg-indigo-600/30 border-indigo-400 text-white shadow-md shadow-indigo-500/10'
+                            : 'bg-[#1A1A1A] border-white/5 text-gray-400 hover:bg-white/10'
+                        }`}
+                      >
+                        <span className="text-xs font-bold text-white">{preset.name}</span>
+                        <span className="text-[9px] text-gray-400 mt-0.5 line-clamp-1">{preset.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {el.motionPreset && el.motionPreset !== 'none' && (
+                    <div className="space-y-3 pt-2">
+                      <label className="block">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-400">Intensitas Gerakan</span>
+                          <span className="text-[10px] text-indigo-400 font-bold">{el.motionIntensity ?? 50}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="10" 
+                          max="100" 
+                          value={el.motionIntensity ?? 50} 
+                          onChange={e => updateElement(el.id, { motionIntensity: Number(e.target.value) })} 
+                          className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" 
+                        />
+                      </label>
+                      <label className="block">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[10px] text-gray-400">Kecepatan Gerakan (Speed)</span>
+                          <span className="text-[10px] text-indigo-400 font-bold">{(el.motionSpeed ?? 1.0).toFixed(1)}x</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0.2" 
+                          max="3.0" 
+                          step="0.1"
+                          value={el.motionSpeed ?? 1.0} 
+                          onChange={e => updateElement(el.id, { motionSpeed: Number(e.target.value) })} 
+                          className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500" 
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
 
                 

@@ -265,6 +265,24 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
       // Always draw to keep canvas updated even if not playing
       animationRef.current = requestAnimationFrame(draw);
 
+      const { dataArray: freqData, bufferLength: freqLength } = getAudioData();
+      const { dataArray: waveData, bufferLength: waveLength } = getWaveformData();
+
+      // Audio Energy & Bass calculations for reactive motion presets
+      let bassSum = 0;
+      const bassCount = Math.min(16, freqLength);
+      for (let i = 0; i < bassCount; i++) {
+        bassSum += freqData[i] || 0;
+      }
+      const bassAvg = bassCount > 0 ? (bassSum / bassCount) / 255 : 0;
+
+      let totalEnergy = 0;
+      const energyCount = Math.min(64, freqLength);
+      for (let i = 0; i < energyCount; i++) {
+        totalEnergy += freqData[i] || 0;
+      }
+      const audioEnergy = energyCount > 0 ? (totalEnergy / energyCount) / 255 : 0;
+
       // Draw Background
       ctx.save();
       const bgConf = project?.backgroundConfig;
@@ -278,6 +296,56 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
           ctx.filter = filterStr.trim();
         }
       }
+
+      // Background Motion Presets Transformation
+      const bgPreset = bgConf?.motionPreset || 'none';
+      const bgIntensity = (bgConf?.motionIntensity ?? 50) / 50;
+      const bgSpeed = bgConf?.motionSpeed ?? 1.0;
+      const bgTime = performance.now() * 0.001 * bgSpeed;
+
+      let bgScale = 1.0;
+      let bgOffsetX = 0;
+      let bgOffsetY = 0;
+      let bgAlpha = 1.0;
+
+      if (bgPreset === 'pulse') {
+        // Bass beat pulse: smoothly expands on bass beats
+        bgScale = 1.0 + (bassAvg * 0.12 + Math.sin(bgTime * 2) * 0.01) * bgIntensity;
+      } else if (bgPreset === 'drift') {
+        // Cinematic Parallax / Ken Burns slow pan & zoom
+        bgScale = 1.08 + Math.sin(bgTime * 0.5) * 0.04 * bgIntensity;
+        bgOffsetX = Math.sin(bgTime * 0.7) * (20 * bgIntensity);
+        bgOffsetY = Math.cos(bgTime * 0.5) * (15 * bgIntensity);
+      } else if (bgPreset === 'slide') {
+        // Smooth slide & pan transition back and forth
+        bgScale = 1.06;
+        bgOffsetX = Math.sin(bgTime * 1.2) * (35 * bgIntensity);
+        bgOffsetY = Math.cos(bgTime * 0.8) * (10 * bgIntensity);
+      } else if (bgPreset === 'fade') {
+        // Ambient breathing glow / dissolve
+        bgAlpha = 0.75 + (Math.sin(bgTime * 2) * 0.15 + bassAvg * 0.1) * bgIntensity;
+        bgAlpha = Math.max(0.2, Math.min(1.0, bgAlpha));
+      } else if (bgPreset === 'zoom_burst') {
+        // Audio drop / beat zoom burst
+        const burst = Math.pow(bassAvg, 2) * 0.25 * bgIntensity;
+        bgScale = 1.0 + burst;
+      } else if (bgPreset === 'shake') {
+        // Sub-bass camera shake on heavy beats
+        if (bassAvg > 0.35) {
+          const shakeMag = (bassAvg - 0.35) * 18 * bgIntensity;
+          bgOffsetX = (Math.random() - 0.5) * shakeMag;
+          bgOffsetY = (Math.random() - 0.5) * shakeMag;
+        }
+      }
+
+      const bgCx = canvas.width / 2;
+      const bgCy = canvas.height / 2;
+      ctx.translate(bgCx + bgOffsetX, bgCy + bgOffsetY);
+      if (bgScale !== 1.0) {
+        ctx.scale(bgScale, bgScale);
+      }
+      ctx.translate(-bgCx, -bgCy);
+      ctx.globalAlpha = bgAlpha;
 
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -375,9 +443,6 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
         ctx.restore();
       }
 
-      const { dataArray: freqData, bufferLength: freqLength } = getAudioData();
-      const { dataArray: waveData, bufferLength: waveLength } = getWaveformData();
-
       const getStyle = (el: any, x1: number, y1: number, x2: number, y2: number) => {
         if (el.useGradient) {
           const grad = ctx.createLinearGradient(x1, y1, x2, y2);
@@ -396,16 +461,52 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
           if (el.endTime !== undefined && currentTimeRef.current > el.endTime) continue;
 
           ctx.save();
-          ctx.globalAlpha = el.opacity;
+
+          // Element Motion Presets Calculation
+          let animScale = 1.0;
+          let animOffsetX = 0;
+          let animOffsetY = 0;
+          let animAlpha = 1.0;
+
+          if (el.motionPreset && el.motionPreset !== 'none') {
+            const mIntensity = (el.motionIntensity ?? 50) / 50;
+            const mSpeed = el.motionSpeed ?? 1.0;
+            const elTime = performance.now() * 0.001 * mSpeed;
+
+            if (el.motionPreset === 'pulse') {
+              // Bass beat pulse
+              animScale = 1.0 + (bassAvg * 0.22) * mIntensity;
+            } else if (el.motionPreset === 'floating_sine') {
+              // Floating sine wave
+              animOffsetY = Math.sin(elTime * 2.5) * (14 * mIntensity);
+            } else if (el.motionPreset === 'slide') {
+              // Smooth sliding oscillation
+              animOffsetX = Math.sin(elTime * 1.8) * (22 * mIntensity);
+            } else if (el.motionPreset === 'fade') {
+              // Breathing fade transition
+              animAlpha = 0.45 + (0.55 * (0.5 + 0.5 * Math.sin(elTime * 2.5))) * mIntensity + (audioEnergy * 0.2);
+              animAlpha = Math.max(0.15, Math.min(1.0, animAlpha));
+            } else if (el.motionPreset === 'glow_pulse') {
+              // Glow scale pulse
+              animScale = 1.0 + (bassAvg * 0.12) * mIntensity;
+            } else if (el.motionPreset === 'bounce') {
+              // Snappy bounce on beat
+              const bouncePhase = (elTime * 4.5) % Math.PI;
+              animOffsetY = -Math.abs(Math.sin(bouncePhase)) * (14 + bassAvg * 20) * mIntensity;
+            }
+          }
+
+          ctx.globalAlpha = el.opacity * animAlpha;
           
-          ctx.translate(el.x, el.y);
+          ctx.translate(el.x + animOffsetX, el.y + animOffsetY);
           if (el.rotation) {
             ctx.rotate(el.rotation * Math.PI / 180);
           }
-          if (el.scale && el.scale !== 1) {
-            ctx.scale(el.scale, el.scale);
+          const totalScale = (el.scale || 1) * animScale;
+          if (totalScale !== 1) {
+            ctx.scale(totalScale, totalScale);
           }
-          ctx.translate(-el.x, -el.y);
+          ctx.translate(-(el.x + animOffsetX), -(el.y + animOffsetY));
           
           if (el.type === 'bars') {
             const barCount = Math.min(64, freqLength);

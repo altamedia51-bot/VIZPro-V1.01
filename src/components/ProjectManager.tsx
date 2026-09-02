@@ -25,7 +25,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ onSelectProject 
       createdAt: Date.now(),
       updatedAt: Date.now(),
       elements: [],
-      backgroundConfig: { type: 'solid_color', value: '#111827' }
+      backgroundConfig: { type: 'image', value: '/neon_wave_terrain.jpg' }
     };
 
     await db.saveProject(newProject);

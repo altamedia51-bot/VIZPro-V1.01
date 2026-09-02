@@ -7,6 +7,24 @@ export type BackgroundType =
   | "animated_gradient"
   | "minimal_grid"
   | "linear_gradient";
+export type BackgroundMotionPreset =
+  | "none"
+  | "pulse"
+  | "drift"
+  | "slide"
+  | "fade"
+  | "zoom_burst"
+  | "shake";
+
+export type WaveformMotionPreset =
+  | "none"
+  | "pulse"
+  | "floating_sine"
+  | "slide"
+  | "fade"
+  | "glow_pulse"
+  | "bounce";
+
 export interface BackgroundConfig {
   type: BackgroundType;
   value: string; // hex color, or blob URL
@@ -19,6 +37,9 @@ export interface BackgroundConfig {
   focusEnabled?: boolean;
   focusSize?: number;
   focusBlur?: number;
+  motionPreset?: BackgroundMotionPreset;
+  motionIntensity?: number;
+  motionSpeed?: number;
 }
 export interface PostProcessingConfig {
   bloom: boolean;
@@ -93,6 +114,9 @@ export interface BaseElement {
   startTime?: number; // Start time in seconds
   endTime?: number;
   groupId?: string; // End time in seconds
+  motionPreset?: WaveformMotionPreset;
+  motionIntensity?: number;
+  motionSpeed?: number;
 }
 export interface BarsElement extends BaseElement {
   type: "bars";
