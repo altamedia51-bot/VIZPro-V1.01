@@ -6,16 +6,17 @@ import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { Timeline } from './Timeline';
 import { useAudioAnalyzer } from '../hooks/useAudioAnalyzer';
 import { Recorder } from '../utils/recordStream';
-import { Play, Pause, SkipBack, Square, Plus, Image as ImageIcon, Download, Trash2, Home, Music, Radio, Type, Sparkles, Layers, Search, Volume2, VolumeX, ChevronDown, ChevronUp, FolderOpen, Undo2, Redo2, FileCode, Maximize2, Settings as SettingsIcon, CheckCircle2, Cpu, Settings, Database, Activity, Wind, Zap, Move, Camera, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Copy, Edit2, Sliders, Palette } from 'lucide-react';
+import { Play, Pause, SkipBack, Square, Plus, Image as ImageIcon, Download, Trash2, Home, Music, Radio, Type, Sparkles, Layers, Search, Volume2, VolumeX, ChevronDown, ChevronUp, FolderOpen, Undo2, Redo2, FileCode, Maximize2, Settings as SettingsIcon, CheckCircle2, Cpu, Settings, Database, Activity, Wind, Zap, Move, Camera, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Copy, Edit2, Sliders, Palette, RefreshCw, Wand2, Check } from 'lucide-react';
 import { parseSRT } from '../utils/srtParser';
 import { db } from '../lib/db';
+import { COLOR_PALETTES, ColorPalette, generateHarmony, HarmonyType } from '../lib/colorHarmonies';
 
 interface EditorProps {
   project: Project;
   onExit: () => void;
 }
 
-type TabType = 'audio' | 'visualizer' | 'text' | 'background' | 'layers';
+type TabType = 'audio' | 'visualizer' | 'palette' | 'text' | 'background' | 'layers';
 type FilterType = 'spectrum' | 'circular' | 'waves' | 'glow' | 'cyber' | 'particles' | 'shapes' | 'elements';
 
 export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit }) => {
@@ -562,6 +563,106 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
     setSelectedElementId(newEl.id);
   };
 
+  const [selectedPaletteId, setSelectedPaletteId] = useState<string>('cyber_neon');
+  const [paletteCategory, setPaletteCategory] = useState<string>('all');
+  const [customBaseColor, setCustomBaseColor] = useState<string>('#00f0ff');
+  const [harmonyType, setHarmonyType] = useState<HarmonyType>('complementary');
+  const [activeThemeSwatches, setActiveThemeSwatches] = useState<string[]>([
+    '#00f0ff', '#ff0055', '#ffe600', '#050510', '#0b001a', '#ffffff'
+  ]);
+
+  const applyPaletteToProject = (palette: ColorPalette) => {
+    setSelectedPaletteId(palette.id);
+    setActiveThemeSwatches([
+      palette.primaryWave,
+      palette.secondaryWave,
+      palette.accentColor,
+      palette.bgColor1,
+      palette.bgColor2 || palette.bgColor1,
+      palette.textColor,
+    ]);
+
+    setProject(prev => {
+      // 1. Update Background
+      const updatedBg = {
+        ...prev.backgroundConfig,
+        type: palette.bgType as any,
+        value: palette.bgColor1,
+        color1: palette.bgColor1,
+        color2: palette.bgColor2 || palette.bgColor1,
+      };
+
+      // 2. Synchronize Elements (Visualizers, Waveforms, Texts, Banners, Particles)
+      const updatedElements = prev.elements.map((el, index) => {
+        const isVisualizer = [
+          'bars', 'mirrored_bars', 'symmetrical_mirror', 'circle', 'double_circle',
+          'circular_spectrum', 'waveform', 'circular_waveform', 'neon_wireframe',
+          'retro_bars', 'equalizer_blocks', 'digital_bars', 'ribbon_flow', 'oscilloscope',
+          'ring_equalizer', 'spectrum_flower', 'sound_radar'
+        ].includes(el.type);
+
+        const isParticleOrEffect = [
+          'particles', 'orbs', 'water_splash', 'spiral_galaxy', 'dna_helix',
+          'tunnel', 'laser_beams', 'aurora_borealis', 'fireworks', 'matrix_rain'
+        ].includes(el.type);
+
+        const isTextOrSub = ['text', 'subtitle', 'sticker_text'].includes(el.type);
+        const isBanner = ['banner', 'bracket_banner'].includes(el.type);
+
+        if (isVisualizer) {
+          // Stagger primary and secondary wave colors if multiple visualizers exist
+          const useSec = index % 2 === 1;
+          return {
+            ...el,
+            color: useSec ? palette.secondaryWave : palette.primaryWave,
+            useGradient: true,
+            color2: useSec ? palette.accentColor : palette.secondaryWave,
+          };
+        }
+
+        if (isParticleOrEffect) {
+          return {
+            ...el,
+            color: palette.accentColor,
+            color2: palette.primaryWave,
+          };
+        }
+
+        if (isTextOrSub) {
+          return {
+            ...el,
+            color: palette.textColor,
+            color2: palette.accentColor,
+          };
+        }
+
+        if (isBanner) {
+          return {
+            ...el,
+            boxColor1: palette.bgColor2 || palette.bgColor1,
+            boxColor2: palette.bgColor1,
+            strokeColor1: palette.primaryWave,
+            strokeColor2: palette.secondaryWave,
+            color: palette.textColor,
+          };
+        }
+
+        return el;
+      });
+
+      return {
+        ...prev,
+        backgroundConfig: updatedBg,
+        elements: updatedElements,
+      };
+    });
+  };
+
+  const applyGeneratedHarmony = () => {
+    const generated = generateHarmony(customBaseColor, harmonyType);
+    applyPaletteToProject(generated);
+  };
+
   const takeSnapshot = () => {
     const canvas = rendererRef.current?.getCanvas();
     if (!canvas) return;
@@ -746,33 +847,45 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
           <div className="flex w-full border-b border-white/5">
             <button 
               onClick={() => setActiveTab('audio')} 
-              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 text-[10px] font-bold tracking-wider transition-colors border-b-2 ${activeTab === 'audio' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 text-[9.5px] font-bold tracking-wider transition-colors border-b-2 ${activeTab === 'audio' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+              title="Pengaturan Audio & Subtitle"
             >
-              <Music size={18} className={activeTab === 'audio' ? 'text-white' : 'text-gray-500'} /> AUDIO
+              <Music size={16} className={activeTab === 'audio' ? 'text-white' : 'text-gray-500'} /> AUDIO
             </button>
             <button 
               onClick={() => setActiveTab('visualizer')} 
-              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 text-[10px] font-bold tracking-wider transition-colors border-b-2 ${activeTab === 'visualizer' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 text-[9.5px] font-bold tracking-wider transition-colors border-b-2 ${activeTab === 'visualizer' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+              title="Preset Gelombang Audio & Bentuk"
             >
-              <Radio size={18} className={activeTab === 'visualizer' ? 'text-white' : 'text-gray-500'} /> VISUALIZER
+              <Radio size={16} className={activeTab === 'visualizer' ? 'text-white' : 'text-gray-500'} /> VISUALIZER
             </button>
             <button 
-              onClick={() => setActiveTab('text')} 
-              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 text-[10px] font-bold tracking-wider transition-colors border-b-2 ${activeTab === 'text' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+              onClick={() => setActiveTab('palette')} 
+              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 text-[9.5px] font-bold tracking-wider transition-colors border-b-2 ${activeTab === 'palette' ? 'text-amber-400 border-amber-400' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+              title="Harmoni & Palet Warna Sinkron"
             >
-              <Type size={18} className={activeTab === 'text' ? 'text-white' : 'text-gray-500'} /> TEXT
+              <Palette size={16} className={activeTab === 'palette' ? 'text-amber-400' : 'text-gray-500'} /> PALET
             </button>
             <button 
               onClick={() => setActiveTab('background')} 
-              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 text-[10px] font-bold tracking-wider transition-colors border-b-2 ${activeTab === 'background' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 text-[9.5px] font-bold tracking-wider transition-colors border-b-2 ${activeTab === 'background' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+              title="Latar Belakang & Efek"
             >
-              <ImageIcon size={18} className={activeTab === 'background' ? 'text-white' : 'text-gray-500'} /> BACKGROUND
+              <ImageIcon size={16} className={activeTab === 'background' ? 'text-white' : 'text-gray-500'} /> BG
+            </button>
+            <button 
+              onClick={() => setActiveTab('text')} 
+              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 text-[9.5px] font-bold tracking-wider transition-colors border-b-2 ${activeTab === 'text' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+              title="Teks, Judul & Subtitle"
+            >
+              <Type size={16} className={activeTab === 'text' ? 'text-white' : 'text-gray-500'} /> TEXT
             </button>
             <button 
               onClick={() => setActiveTab('layers')} 
-              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 text-[10px] font-bold tracking-wider transition-colors border-b-2 ${activeTab === 'layers' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+              className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 text-[9.5px] font-bold tracking-wider transition-colors border-b-2 ${activeTab === 'layers' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+              title="Manajemen Layer & Overlay"
             >
-              <Layers size={18} className={activeTab === 'layers' ? 'text-white' : 'text-gray-500'} /> LAYERS
+              <Layers size={16} className={activeTab === 'layers' ? 'text-white' : 'text-gray-500'} /> LAYERS
             </button>
           </div>
 
@@ -794,6 +907,149 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                     </div>
                     <input type="file" accept=".srt" onChange={handleSrtUpload} className="block w-full text-xs text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-white/5 file:text-white hover:file:bg-white/10 cursor-pointer" />
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'palette' && (
+              <div className="flex flex-col h-full overflow-hidden p-4 space-y-4">
+                {/* Header info */}
+                <div className="bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-blue-500/10 border border-amber-500/20 rounded-xl p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Palette size={14} className="text-amber-400" />
+                    <h2 className="text-xs font-bold text-white tracking-wide">Sinkronisasi Palet Warna</h2>
+                  </div>
+                  <p className="text-[10px] text-gray-300 leading-relaxed">
+                    1-klik sinkronkan kombinasi warna harmonis antara background canvas, visualizer gelombang, teks & partikel.
+                  </p>
+                </div>
+
+                {/* Generator Harmoni Kustom */}
+                <div className="bg-[#141418] border border-white/5 rounded-xl p-3 space-y-3">
+                  <h3 className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold flex items-center gap-1.5">
+                    <Wand2 size={12} className="text-purple-400" /> Generator Harmoni Warna
+                  </h3>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-[9px] text-gray-400 block mb-1">Warna Utama (Key Color)</span>
+                      <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-lg p-1.5">
+                        <input 
+                          type="color" 
+                          value={customBaseColor} 
+                          onChange={e => setCustomBaseColor(e.target.value)} 
+                          className="w-6 h-6 rounded cursor-pointer bg-transparent border-0" 
+                        />
+                        <span className="text-[10.5px] font-mono text-gray-200">{customBaseColor.toUpperCase()}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[9px] text-gray-400 block mb-1">Tipe Harmoni</span>
+                      <select 
+                        value={harmonyType} 
+                        onChange={e => setHarmonyType(e.target.value as HarmonyType)}
+                        className="w-full bg-black/40 border border-white/10 rounded-lg p-1.5 text-[10.5px] text-white focus:outline-none focus:border-purple-500"
+                      >
+                        <option value="complementary">Komplementer</option>
+                        <option value="analogous">Analog (Harmonis)</option>
+                        <option value="triadic">Triadik (3 Arah)</option>
+                        <option value="split_complementary">Split-Komplementer</option>
+                        <option value="monochromatic">Monokromatik</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={applyGeneratedHarmony}
+                    className="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-md shadow-purple-500/20"
+                  >
+                    <Wand2 size={13} />
+                    <span>Terapkan Harmoni Kustom</span>
+                  </button>
+                </div>
+
+                {/* Category Filter Chips */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold">Preset Palet Kurasi</h3>
+                    <span className="text-[9px] text-gray-500">{COLOR_PALETTES.length} Palet Siap Pakai</span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      { id: 'all', label: 'Semua' },
+                      { id: 'cyberpunk', label: 'Cyberpunk' },
+                      { id: 'synthwave', label: 'Synthwave' },
+                      { id: 'sunset', label: 'Sunset' },
+                      { id: 'lofi', label: 'Lofi Pastel' },
+                      { id: 'deep_sea', label: 'Deep Ocean' },
+                      { id: 'nature', label: 'Nature' },
+                      { id: 'luxury', label: 'Luxury Gold' },
+                      { id: 'monochrome', label: 'Monochrome' },
+                    ].map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setPaletteCategory(cat.id)}
+                        className={`px-2 py-0.5 rounded-full text-[9px] font-medium transition-colors ${
+                          paletteCategory === cat.id
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            : 'bg-white/5 text-gray-400 hover:text-gray-200 border border-transparent'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Palette Card List */}
+                <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 no-scrollbar">
+                  {COLOR_PALETTES
+                    .filter(p => paletteCategory === 'all' || p.category === paletteCategory)
+                    .map(pal => {
+                      const isSelected = selectedPaletteId === pal.id;
+                      return (
+                        <div
+                          key={pal.id}
+                          onClick={() => applyPaletteToProject(pal)}
+                          className={`p-3 rounded-xl border transition-all cursor-pointer relative group ${
+                            isSelected
+                              ? 'bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-blue-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
+                              : 'bg-[#141418] border-white/5 hover:border-white/20 hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <span className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors">
+                                {pal.name}
+                              </span>
+                              <p className="text-[9.5px] text-gray-400 mt-0.5 line-clamp-1">{pal.description}</p>
+                            </div>
+                            {isSelected && (
+                              <span className="px-1.5 py-0.5 bg-amber-500 text-black font-black text-[8.5px] rounded flex items-center gap-0.5 shrink-0">
+                                <Check size={10} /> AKTIF
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Color Swatch Preview Bar */}
+                          <div className="h-6 rounded-lg overflow-hidden flex border border-white/10 shadow-inner">
+                            <div className="flex-1" style={{ backgroundColor: pal.bgColor1 }} title={`Latar 1: ${pal.bgColor1}`} />
+                            <div className="flex-1" style={{ backgroundColor: pal.bgColor2 || pal.bgColor1 }} title={`Latar 2: ${pal.bgColor2 || pal.bgColor1}`} />
+                            <div className="flex-1" style={{ backgroundColor: pal.primaryWave }} title={`Gelombang Utama: ${pal.primaryWave}`} />
+                            <div className="flex-1" style={{ backgroundColor: pal.secondaryWave }} title={`Gelombang Kedua: ${pal.secondaryWave}`} />
+                            <div className="flex-1" style={{ backgroundColor: pal.accentColor }} title={`Aksen & Partikel: ${pal.accentColor}`} />
+                            <div className="flex-1" style={{ backgroundColor: pal.textColor }} title={`Teks: ${pal.textColor}`} />
+                          </div>
+
+                          <div className="flex justify-between items-center mt-2 text-[8.5px] text-gray-500">
+                            <span>Latar: {pal.bgType.replace('_', ' ')}</span>
+                            <span className="group-hover:text-amber-400 transition-colors font-medium">Klik untuk Sinkronkan →</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}
@@ -2357,6 +2613,34 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                   <h3 className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center gap-2">
                     <Settings size={12} /> Properti Visualizer ({el.type})
                   </h3>
+                  {/* Active Theme Swatches Quick Pick */}
+                  <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-2.5 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9.5px] font-bold text-amber-400 flex items-center gap-1">
+                        <Palette size={11} /> Palet Harmoni Proyek
+                      </span>
+                      <button 
+                        onClick={() => setActiveTab('palette')}
+                        className="text-[8.5px] text-gray-400 hover:text-amber-300 underline cursor-pointer"
+                      >
+                        Ganti Palet
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {activeThemeSwatches.map((color, idx) => (
+                        <button
+                          key={`${color}-${idx}`}
+                          onClick={() => updateElement(el.id, { color })}
+                          className={`flex-1 h-6 rounded border transition-transform hover:scale-105 ${
+                            el.color?.toLowerCase() === color.toLowerCase() ? 'border-amber-400 scale-105 shadow-md shadow-amber-500/30' : 'border-white/10'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          title={`Gunakan warna tema: ${color}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="block">
                     <span className="text-[10px] text-gray-500 mb-2 block">Warna Utama</span>
                     <div className="flex flex-wrap gap-1">
