@@ -832,6 +832,27 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
               lines.forEach((line, i) => {
                 const lineY = startY + i * lineHeight;
                 
+                // Khusus baris terjemahan (baris ke-2 ke atas pada mode bilingual):
+                // Baris terjemahan SELALU statis, teks normal LTR, tidak ikut berubah warna efek karaoke/kata aktif
+                if (el.type === 'subtitle' && lines.length > 1 && i > 0) {
+                  const transScale = (el as any).translationScale || 0.85;
+                  const transColor = (el as any).translationColor || '#E2E8F0';
+                  ctx.save();
+                  ctx.font = `${Math.round(el.fontSize * transScale)}px ${el.fontFamily}`;
+                  ctx.textAlign = 'center';
+                  
+                  // Stroke halus berwarna gelap agar teks terjemahan kontras & sangat jelas dibaca
+                  const strokeW = Math.max(2, Math.round(el.fontSize * 0.04));
+                  ctx.lineWidth = strokeW;
+                  ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+                  ctx.strokeText(line, 0, lineY + (el.fontSize * 0.08));
+                  
+                  ctx.fillStyle = transColor;
+                  ctx.fillText(line, 0, lineY + (el.fontSize * 0.08));
+                  ctx.restore();
+                  return;
+                }
+                
                 if (el.templateStyle === 'bubble_yellow') {
                   ctx.fillStyle = '#000000';
                   ctx.fillText(line, 0, lineY);
@@ -1437,7 +1458,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   const words = line.split(' ').filter(w => w.trim() !== '');
                   const totalWords = words.length;
                   
-                  const allWords = textToRender.split(/\s+/).filter(w => w.trim() !== '');
+                  const allWords = (el.type === 'subtitle' && lines.length > 1 ? lines[0] : textToRender).split(/\s+/).filter(w => w.trim() !== '');
                   const globalTotalWords = allWords.length;
                   const globalActiveWordIdx = Math.min(globalTotalWords - 1, Math.floor(progress * globalTotalWords));
                   
