@@ -1538,8 +1538,17 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   ctx.fillText(line, 0, lineY);
                 } else {
                   // Default
-                  ctx.fillStyle = getStyle(el, -width/2, lineY, width/2, lineY);
-                  ctx.fillText(line, 0, lineY);
+                  if (el.type === 'subtitle' && lines.length > 1 && i > 0) {
+                    const transScale = (el as any).translationScale || 0.85;
+                    ctx.save();
+                    ctx.font = `${Math.round(el.fontSize * transScale)}px ${el.fontFamily}`;
+                    ctx.fillStyle = (el as any).translationColor || '#E2E8F0';
+                    ctx.fillText(line, 0, lineY + (el.fontSize * 0.1));
+                    ctx.restore();
+                  } else {
+                    ctx.fillStyle = getStyle(el, -width/2, lineY, width/2, lineY);
+                    ctx.fillText(line, 0, lineY);
+                  }
                 }
               });
 

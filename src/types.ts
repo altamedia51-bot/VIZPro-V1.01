@@ -53,6 +53,8 @@ export interface Subtitle {
   start: number; // in seconds
   end: number;
   text: string;
+  originalText?: string;
+  translatedText?: string;
 }
 export interface Project {
   id: string;
@@ -335,6 +337,9 @@ export interface SubtitleElement extends BaseElement {
   textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
   backgroundColor?: string;
   backgroundOpacity?: number;
+  bilingualMode?: "bilingual" | "translated_only" | "original_only";
+  translationColor?: string;
+  translationScale?: number;
 }
 export interface DigitalMatrixRainElement extends BaseElement {
   type: "digital_matrix_rain";

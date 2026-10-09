@@ -1,6 +1,6 @@
 import { PLATFORM_ICONS } from "../lib/icons";
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Project, VizElement, BackgroundType, TextElement } from '../types';
+import { Project, VizElement, BackgroundType, TextElement, Subtitle } from '../types';
 import { CanvasRenderer, CanvasRendererRef } from './CanvasRenderer';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { Timeline } from './Timeline';
@@ -8,6 +8,9 @@ import { useAudioAnalyzer } from '../hooks/useAudioAnalyzer';
 import { Recorder } from '../utils/recordStream';
 import { Play, Pause, SkipBack, Square, Plus, Image as ImageIcon, Download, Trash2, Home, Music, Radio, Type, Sparkles, Layers, Search, Volume2, VolumeX, ChevronDown, ChevronUp, FolderOpen, Undo2, Redo2, FileCode, Maximize2, Settings as SettingsIcon, CheckCircle2, Cpu, Settings, Database, Activity, Wind, Zap, Move, Camera, Eye, EyeOff, Lock, Unlock, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, Copy, Edit2, Sliders, Palette, RefreshCw, Wand2, Check } from 'lucide-react';
 import { parseSRT } from '../utils/srtParser';
+import { LyricImportModal } from './LyricImportModal';
+import { detectAndParseLyrics, formatSubtitleText } from '../utils/lyricsParser';
+import { translateLyrics, SUPPORTED_LANGUAGES } from '../utils/translator';
 import { db } from '../lib/db';
 import { COLOR_PALETTES, ColorPalette, generateHarmony, HarmonyType } from '../lib/colorHarmonies';
 
@@ -92,6 +95,9 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
   const [openStickersAccordion, setOpenStickersAccordion] = useState(false);
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [layerNameInput, setLayerNameInput] = useState('');
+  const [isLyricModalOpen, setIsLyricModalOpen] = useState(false);
+  const [isTranslatingExisting, setIsTranslatingExisting] = useState(false);
+  const [existingTranslateLang, setExistingTranslateLang] = useState('id');
   const recorderRef = useRef<Recorder | null>(null);
   const rendererRef = useRef<CanvasRendererRef>(null);
 
@@ -157,11 +163,73 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
     }
   };
 
+  const handleApplyLyricsFromModal = (newSubtitles: Subtitle[]) => {
+    let subEl = project.elements.find(el => el.type === 'subtitle');
+    const newElements = [...project.elements];
+    let subId = subEl?.id;
+
+    if (!subEl) {
+      subId = crypto.randomUUID();
+      const newSub: any = {
+        id: subId,
+        type: 'subtitle',
+        x: project.resolution?.width ? project.resolution.width / 2 : 640,
+        y: project.resolution?.height ? project.resolution.height - 120 : 600,
+        scale: 1,
+        rotation: 0,
+        color: '#ffffff',
+        opacity: 1,
+        fontSize: 32,
+        fontFamily: 'Inter',
+        bilingualMode: 'bilingual',
+        translationColor: '#E2E8F0',
+        translationScale: 0.85,
+      };
+      newElements.push(newSub);
+    }
+
+    setProject(prev => ({
+      ...prev,
+      subtitles: newSubtitles,
+      elements: newElements,
+    }));
+
+    if (subId) setSelectedElementId(subId);
+    setActiveTab('text');
+  };
+
+  const handleTranslateExistingSubtitles = async () => {
+    if (!project.subtitles || project.subtitles.length === 0) return;
+    setIsTranslatingExisting(true);
+    try {
+      const texts = project.subtitles.map(s => s.originalText || s.text.split('\n')[0]);
+      const translations = await translateLyrics(texts, existingTranslateLang);
+      const updated = project.subtitles.map((s, idx) => {
+        const orig = s.originalText || s.text.split('\n')[0];
+        const trans = translations[idx] || '';
+        return {
+          ...s,
+          originalText: orig,
+          translatedText: trans,
+          text: formatSubtitleText(orig, trans, 'bilingual'),
+        };
+      });
+      setProject(prev => ({
+        ...prev,
+        subtitles: updated,
+      }));
+    } catch (err) {
+      console.error('Translation error:', err);
+    } finally {
+      setIsTranslatingExisting(false);
+    }
+  };
+
   const handleSrtUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const text = await file.text();
-      const subtitles = parseSRT(text);
+      const { subtitles } = detectAndParseLyrics(text, file.name, duration);
       
       const hasSubtitleEl = project.elements.some(el => el.type === 'subtitle');
       const newElements = [...project.elements];
@@ -174,14 +242,17 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
           id: subElId,
           type: 'subtitle',
           x: project.resolution?.width ? project.resolution.width / 2 : 640,
-          y: project.resolution?.height ? project.resolution.height - 100 : 620,
+          y: project.resolution?.height ? project.resolution.height - 120 : 600,
           scale: 1,
           rotation: 0,
           color: '#ffffff',
           opacity: 1,
           fontSize: 32,
           fontFamily: 'Inter',
-        } as any); // Cast as any because SubtitleElement will be correctly inferred but TypeScript might complain about missing properties depending on BaseElement structure
+          bilingualMode: 'bilingual',
+          translationColor: '#E2E8F0',
+          translationScale: 0.85,
+        } as any);
       }
       
       setProject(prev => ({
@@ -899,14 +970,26 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                     <label className="block text-xs mb-1 text-gray-400">Audio Track</label>
                     <input type="file" accept="audio/*" onChange={handleAudioUpload} className="block w-full text-xs text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-white/5 file:text-white hover:file:bg-white/10 cursor-pointer" />
                   </div>
-                  <div className="border-t border-white/10 pt-4">
+                  <div className="border-t border-white/10 pt-4 space-y-2">
                     <div className="flex justify-between items-center mb-1">
-                      <label className="block text-xs text-gray-400">Subtitle File (.srt)</label>
+                      <label className="block text-xs text-gray-400 font-medium">Lirik & Subtitle (.lrc, .srt, .txt)</label>
                       {project.subtitles && project.subtitles.length > 0 && (
-                        <span className="text-[10px] text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">{project.subtitles.length} lines</span>
+                        <span className="text-[10px] text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full font-bold">{project.subtitles.length} baris</span>
                       )}
                     </div>
-                    <input type="file" accept=".srt" onChange={handleSrtUpload} className="block w-full text-xs text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-white/5 file:text-white hover:file:bg-white/10 cursor-pointer" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex items-center justify-center gap-1.5 cursor-pointer bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg py-2 px-3 text-xs font-semibold text-white transition-all text-center">
+                        <FolderOpen size={13} /> Pilih File
+                        <input type="file" accept=".lrc,.srt,.txt" onChange={handleSrtUpload} className="hidden" />
+                      </label>
+                      <button 
+                        type="button"
+                        onClick={() => setIsLyricModalOpen(true)}
+                        className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg py-2 px-3 text-xs font-bold transition-all shadow-md shadow-blue-600/20"
+                      >
+                        <Sparkles size={13} className="text-amber-300" /> Terjemah AI
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1372,11 +1455,20 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
 
             {activeTab === 'text' && (
               <div className="flex flex-col h-full overflow-hidden p-4">
-                <div className="flex gap-2 mb-4">
-                  <button onClick={() => addElement('text')} className="w-full p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center transition-colors text-white font-bold text-sm">
-                    + TEKS BARU
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <button 
+                    onClick={() => addElement('text')} 
+                    className="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center transition-colors text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <Plus size={14} /> + TEKS BARU
                   </button>
-                  
+                  <button 
+                    onClick={() => setIsLyricModalOpen(true)} 
+                    className="p-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-lg text-center transition-all text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20"
+                    title="Import Lirik (.lrc, .srt, .txt) & Terjemahkan Otomatis Bilingual"
+                  >
+                    <Sparkles size={14} className="text-amber-300" /> IMPORT LIRIK (AI)
+                  </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto pr-1">
@@ -1412,16 +1504,117 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
     </div>
   )}
   {isSubtitle && (
-    <div className="space-y-2 mt-4 flex flex-col">
-      <div className="flex justify-between items-center mb-1">
-        <label className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Editor Subtitle</label>
-        <button onClick={() => {
-          setProject(prev => ({
-            ...prev,
-            subtitles: [...(prev.subtitles || []), { id: crypto.randomUUID(), start: prev.subtitles?.length ? Math.round(prev.subtitles[prev.subtitles.length - 1].end * 100)/100 : 0, end: prev.subtitles?.length ? Math.round((prev.subtitles[prev.subtitles.length - 1].end + 2) * 100)/100 : 2, text: 'New Subtitle' }]
-          }))
-        }} className="text-[10px] text-blue-500 hover:text-blue-400 font-bold flex items-center gap-1">+ TAMBAH</button>
+    <div className="space-y-3 mt-4 flex flex-col">
+      {/* Subtitle Header & Quick AI Translator Bar */}
+      <div className="bg-[#141418] border border-white/5 rounded-xl p-3 space-y-3">
+        <div className="flex justify-between items-center">
+          <label className="text-[10px] text-gray-400 uppercase tracking-wider font-bold flex items-center gap-1.5">
+            <Music size={12} className="text-blue-400" /> Editor Lirik & Subtitle
+          </label>
+          <div className="flex items-center gap-1.5">
+            <button 
+              onClick={() => setIsLyricModalOpen(true)}
+              className="text-[10px] text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 px-2 py-1 rounded-md font-bold flex items-center gap-1 transition-colors"
+              title="Import file lirik / subtitle baru atau terjemahkan"
+            >
+              <Sparkles size={11} /> Import Lirik
+            </button>
+            <button 
+              onClick={() => {
+                setProject(prev => ({
+                  ...prev,
+                  subtitles: [...(prev.subtitles || []), { 
+                    id: crypto.randomUUID(), 
+                    start: prev.subtitles?.length ? Math.round(prev.subtitles[prev.subtitles.length - 1].end * 100)/100 : 0, 
+                    end: prev.subtitles?.length ? Math.round((prev.subtitles[prev.subtitles.length - 1].end + 2) * 100)/100 : 2, 
+                    text: 'New Subtitle',
+                    originalText: 'New Subtitle' 
+                  }]
+                }))
+              }} 
+              className="text-[10px] text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded-md font-bold flex items-center gap-1 transition-colors"
+            >
+              + Tambah
+            </button>
+          </div>
+        </div>
+
+        {/* 1-Click AI Translation for existing subtitles */}
+        {project.subtitles && project.subtitles.length > 0 && (
+          <div className="pt-2 border-t border-white/5 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-gray-400 font-medium">Ke:</span>
+              <select
+                value={existingTranslateLang}
+                onChange={e => setExistingTranslateLang(e.target.value)}
+                className="bg-black/50 border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none"
+              >
+                {SUPPORTED_LANGUAGES.map(l => (
+                  <option key={l.code} value={l.code}>{l.flag} {l.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={handleTranslateExistingSubtitles}
+              disabled={isTranslatingExisting}
+              className="text-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-2.5 py-1 rounded-md shadow-sm transition-all flex items-center gap-1 disabled:opacity-50"
+            >
+              {isTranslatingExisting ? (
+                <>
+                  <RefreshCw size={11} className="animate-spin" /> Menerjemahkan...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={11} className="text-amber-300" /> Terjemahkan ke Bilingual
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Bilingual Subtitle Customizer Settings */}
+      <div className="bg-[#141418] border border-white/5 rounded-xl p-3 space-y-2.5">
+        <span className="text-[9.5px] uppercase tracking-wider text-gray-400 font-bold block">
+          Format Tampilan Bilingual
+        </span>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="text-[9px] text-gray-400 block mb-1">Warna Baris Terjemahan</span>
+            <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-lg p-1.5">
+              <input 
+                type="color" 
+                value={(el as any).translationColor || '#E2E8F0'} 
+                onChange={e => updateElement(el.id, { translationColor: e.target.value } as any)} 
+                className="w-5 h-5 rounded cursor-pointer bg-transparent border-0" 
+              />
+              <span className="text-[10px] font-mono text-gray-300 uppercase">
+                {(el as any).translationColor || '#E2E8F0'}
+              </span>
+            </div>
+          </div>
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-[9px] text-gray-400">Ukuran Terjemahan</span>
+              <span className="text-[9px] font-mono text-blue-400 font-bold">
+                {Math.round(((el as any).translationScale || 0.85) * 100)}%
+              </span>
+            </div>
+            <input 
+              type="range" 
+              min="0.5" 
+              max="1.2" 
+              step="0.05"
+              value={(el as any).translationScale || 0.85} 
+              onChange={e => updateElement(el.id, { translationScale: parseFloat(e.target.value) } as any)} 
+              className="w-full accent-blue-500 cursor-pointer" 
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Subtitles list */}
       <div className="space-y-2 pb-4">
       {project.subtitles?.map((sub, index) => (
         <div 
@@ -1487,7 +1680,12 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
               <Trash2 size={16} />
             </button>
           </div>
-          <div className="mt-1">
+          <div className="mt-1 space-y-1">
+            {sub.text.includes('\n') && (
+              <div className="flex items-center justify-between text-[9px] text-blue-400 font-mono">
+                <span>🌟 Bilingual (Baris 1 = Asli, Baris 2 = Terjemahan)</span>
+              </div>
+            )}
             <textarea
               value={sub.text}
               onChange={e => {
@@ -1496,14 +1694,14 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                 setProject(prev => ({ ...prev, subtitles: newSubs }));
               }}
               className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 min-h-[60px] resize-y"
-              placeholder="Teks subtitle..."
+              placeholder="Teks subtitle... (Gunakan Enter untuk baris kedua terjemahan)"
             />
           </div>
         </div>
       ))}
       {(!project.subtitles || project.subtitles.length === 0) && (
         <div className="text-center py-8 bg-black/20 rounded-lg border border-white/5 text-gray-500 text-xs">
-          Belum ada subtitle.<br/>Upload file SRT atau tambah manual.
+          Belum ada subtitle.<br/>Upload file lirik (.LRC / .SRT / .TXT) atau tambah manual.
         </div>
       )}
       </div>
@@ -3381,6 +3579,14 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
           </div>
         </div>
       </footer>
+
+      {/* Modal Import & Terjemahan Lirik AI Bilingual */}
+      <LyricImportModal
+        isOpen={isLyricModalOpen}
+        onClose={() => setIsLyricModalOpen(false)}
+        audioDuration={duration}
+        onApplyLyrics={handleApplyLyricsFromModal}
+      />
     </div>
   );
 };
