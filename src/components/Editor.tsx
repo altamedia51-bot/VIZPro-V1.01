@@ -986,8 +986,9 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
                         type="button"
                         onClick={() => setIsLyricModalOpen(true)}
                         className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg py-2 px-3 text-xs font-bold transition-all shadow-md shadow-blue-600/20"
+                        title="Import File Lirik (.lrc, .srt, .txt) & Terjemahkan AI Bilingual"
                       >
-                        <Sparkles size={13} className="text-amber-300" /> Terjemah AI
+                        <Sparkles size={13} className="text-amber-300" /> Import Lirik (AI)
                       </button>
                     </div>
                   </div>
@@ -1455,19 +1456,12 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
 
             {activeTab === 'text' && (
               <div className="flex flex-col h-full overflow-hidden p-4">
-                <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="mb-4">
                   <button 
                     onClick={() => addElement('text')} 
-                    className="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center transition-colors text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                    className="w-full p-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-center transition-colors text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     <Plus size={14} /> + TEKS BARU
-                  </button>
-                  <button 
-                    onClick={() => setIsLyricModalOpen(true)} 
-                    className="p-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-lg text-center transition-all text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20"
-                    title="Import Lirik (.lrc, .srt, .txt) & Terjemahkan Otomatis Bilingual"
-                  >
-                    <Sparkles size={14} className="text-amber-300" /> IMPORT LIRIK (AI)
                   </button>
                 </div>
 
@@ -1512,13 +1506,6 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
             <Music size={12} className="text-blue-400" /> Editor Lirik & Subtitle
           </label>
           <div className="flex items-center gap-1.5">
-            <button 
-              onClick={() => setIsLyricModalOpen(true)}
-              className="text-[10px] text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 px-2 py-1 rounded-md font-bold flex items-center gap-1 transition-colors"
-              title="Import file lirik / subtitle baru atau terjemahkan"
-            >
-              <Sparkles size={11} /> Import Lirik
-            </button>
             <button 
               onClick={() => {
                 setProject(prev => ({
@@ -1577,8 +1564,22 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
       {/* Bilingual Subtitle Customizer Settings */}
       <div className="bg-[#141418] border border-white/5 rounded-xl p-3 space-y-2.5">
         <span className="text-[9.5px] uppercase tracking-wider text-gray-400 font-bold block">
-          Format Tampilan Bilingual
+          Format Tampilan Lirik & Terjemahan
         </span>
+
+        <div>
+          <span className="text-[9px] text-gray-400 block mb-1">Mode Tampilan Lirik</span>
+          <select
+            value={(el as any).bilingualMode || 'bilingual'}
+            onChange={e => updateElement(el.id, { bilingualMode: e.target.value } as any)}
+            className="w-full bg-black/40 border border-white/10 rounded-lg p-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+          >
+            <option value="bilingual">Otomatis / Bilingual (Lirik + Terjemahan Statis)</option>
+            <option value="original_only">Lirik Saja (Multi-Baris Enter - Semua Baris Karaoke)</option>
+            <option value="translated_only">Hanya Terjemahan</option>
+          </select>
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <div>
             <span className="text-[9px] text-gray-400 block mb-1">Warna Baris Terjemahan</span>
@@ -1681,20 +1682,80 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
             </button>
           </div>
           <div className="mt-1 space-y-1">
-            {sub.text.includes('\n') && (
-              <div className="flex items-center justify-between text-[9px] text-blue-400 font-mono">
-                <span>🌟 Bilingual (Baris 1 = Asli, Baris 2 = Terjemahan)</span>
-              </div>
-            )}
+            {(() => {
+              const hasLines = sub.text.includes('\n');
+              const lines = sub.text.split('\n');
+              const hasTrans = Boolean(
+                sub.translatedText && 
+                sub.translatedText.trim() !== '' && 
+                lines.length > 1 && 
+                (lines[lines.length - 1].trim() === sub.translatedText.trim() ||
+                 sub.text.endsWith('\n' + sub.translatedText.trim()))
+              );
+              
+              if (!hasLines) return null;
+              
+              if (hasTrans) {
+                return (
+                  <div className="flex items-center justify-between text-[9px] text-blue-400 font-mono bg-blue-500/10 px-2 py-1 rounded">
+                    <span>🌟 Bilingual (Baris 1 = Lirik, Baris 2 = Terjemahan Statis)</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newSubs = [...(project.subtitles || [])];
+                        newSubs[index] = { ...newSubs[index], translatedText: undefined, originalText: newSubs[index].text };
+                        setProject(prev => ({ ...prev, subtitles: newSubs }));
+                      }}
+                      className="text-[9px] text-amber-300 hover:underline cursor-pointer font-sans font-medium"
+                      title="Ubah agar semua baris menjadi lirik asli yang ikut sorotan karaoke"
+                    >
+                      Jadikan Semua Lirik (Karaoke)
+                    </button>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="flex items-center justify-between text-[9px] text-amber-400 font-mono bg-amber-500/10 px-2 py-1 rounded">
+                    <span>↵ Lirik Multi-Baris (Semua Baris Aktif Sorotan Karaoke Kuning)</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newSubs = [...(project.subtitles || [])];
+                        const sLines = newSubs[index].text.split('\n');
+                        if (sLines.length > 1) {
+                          const trans = sLines[sLines.length - 1].trim();
+                          const orig = sLines.slice(0, -1).join('\n').trim();
+                          newSubs[index] = { ...newSubs[index], originalText: orig, translatedText: trans };
+                          setProject(prev => ({ ...prev, subtitles: newSubs }));
+                        }
+                      }}
+                      className="text-[9px] text-blue-300 hover:underline cursor-pointer font-sans font-medium"
+                      title="Jadikan baris paling bawah sebagai terjemahan statis"
+                    >
+                      Jadikan Baris Bawah Terjemahan
+                    </button>
+                  </div>
+                );
+              }
+            })()}
             <textarea
               value={sub.text}
               onChange={e => {
                 const newSubs = [...(project.subtitles || [])];
-                newSubs[index] = { ...newSubs[index], text: e.target.value };
+                const newText = e.target.value;
+                const lines = newText.split('\n');
+                const oldTrans = newSubs[index].translatedText;
+                const keepsTranslation = Boolean(oldTrans && lines.length > 1 && lines[lines.length - 1].trim() === oldTrans.trim());
+                newSubs[index] = { 
+                  ...newSubs[index], 
+                  text: newText,
+                  originalText: keepsTranslation ? lines.slice(0, -1).join('\n') : newText,
+                  translatedText: keepsTranslation ? oldTrans : undefined
+                };
                 setProject(prev => ({ ...prev, subtitles: newSubs }));
               }}
               className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 min-h-[60px] resize-y"
-              placeholder="Teks subtitle... (Gunakan Enter untuk baris kedua terjemahan)"
+              placeholder="Teks subtitle... (Gunakan Enter untuk baris baru)"
             />
           </div>
         </div>

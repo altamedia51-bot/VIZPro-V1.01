@@ -710,7 +710,24 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
               const lines = textToRender.split('\n');
               const lineHeight = el.fontSize * 1.2;
               const startY = -(lines.length - 1) * lineHeight / 2;
-              
+
+              // Deteksi apakah subtitle ini memiliki baris terjemahan bilingual yang valid
+              const bilingualMode = (el as any).bilingualMode || 'bilingual';
+              const hasExplicitTranslation = Boolean(
+                el.type === 'subtitle' &&
+                bilingualMode !== 'original_only' &&
+                activeSub?.translatedText &&
+                activeSub.translatedText.trim().length > 0 &&
+                lines.length > 1 &&
+                (lines[lines.length - 1].trim() === activeSub.translatedText.trim() ||
+                 activeSub.text.endsWith('\n' + activeSub.translatedText.trim()))
+              );
+              const hasTranslation = hasExplicitTranslation;
+              const isTranslationLine = (lineIdx: number) => {
+                return hasTranslation && lineIdx === lines.length - 1;
+              };
+              const lyricLines = hasTranslation ? lines.slice(0, lines.length - 1) : lines;
+
               if (el.type === 'sticker_text') {
                  // console.log("Drawing sticker text", textToRender);
                  ctx.lineJoin = 'round';
@@ -832,9 +849,9 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
               lines.forEach((line, i) => {
                 const lineY = startY + i * lineHeight;
                 
-                // Khusus baris terjemahan (baris ke-2 ke atas pada mode bilingual):
+                // Khusus baris terjemahan (hanya jika mode bilingual aktif dan baris ini benar-benar terjemahan):
                 // Baris terjemahan SELALU statis, teks normal LTR, tidak ikut berubah warna efek karaoke/kata aktif
-                if (el.type === 'subtitle' && lines.length > 1 && i > 0) {
+                if (isTranslationLine(i)) {
                   const transScale = (el as any).translationScale || 0.85;
                   const transColor = (el as any).translationColor || '#E2E8F0';
                   ctx.save();
@@ -1284,7 +1301,14 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   // highlight_pop: active word is larger, tilted, colored. Others are white.
                   const words = line.split(' ');
                   const totalWords = words.length;
-                  const activeWordIndex = Math.min(totalWords - 1, Math.floor(progress * totalWords));
+                  const allWords = lyricLines.join(' ').split(/\s+/).filter(w => w.trim() !== '');
+                  const globalTotalWords = allWords.length || 1;
+                  const globalActiveWordIdx = Math.min(globalTotalWords - 1, Math.floor(progress * globalTotalWords));
+                  
+                  let startWordIdx = 0;
+                  for (let k = 0; k < i; k++) {
+                    startWordIdx += lines[k].split(' ').filter(w => w.trim() !== '').length;
+                  }
                   
                   let currentX = 0;
                   ctx.font = `italic 900 ${el.fontSize}px ${el.fontFamily}`;
@@ -1294,6 +1318,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   let startX = -totalWidth / 2;
                   
                   words.forEach((word, wIdx) => {
+                    const globalIdx = startWordIdx + wIdx;
                     const wordWidth = ctx.measureText(word).width;
                     const spaceWidth = ctx.measureText(' ').width;
                     
@@ -1306,8 +1331,8 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                     ctx.lineWidth = el.fontSize * 0.15;
                     ctx.strokeStyle = '#000000';
                     
-                    if (wIdx === activeWordIndex) {
-                      ctx.fillStyle = el.color || '#FFFF00'; // Default yellow
+                    if (globalIdx === globalActiveWordIdx) {
+                      ctx.fillStyle = (el.color && el.color.toLowerCase() !== '#ffffff') ? el.color : '#FFFF00'; // Default yellow
                       
                       ctx.save();
                       // translate to center of word
@@ -1341,7 +1366,14 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                 } else if (el.templateStyle === 'popup_words') {
                   const words = line.split(' ');
                   const totalWords = words.length;
-                  const activeWordIndex = Math.min(totalWords - 1, Math.floor(progress * totalWords));
+                  const allWords = lyricLines.join(' ').split(/\s+/).filter(w => w.trim() !== '');
+                  const globalTotalWords = allWords.length || 1;
+                  const globalActiveWordIdx = Math.min(globalTotalWords - 1, Math.floor(progress * globalTotalWords));
+
+                  let startWordIdx = 0;
+                  for (let k = 0; k < i; k++) {
+                    startWordIdx += lines[k].split(' ').filter(w => w.trim() !== '').length;
+                  }
 
                   const totalWidth = ctx.measureText(line).width;
                   let currentX = isArabic ? (totalWidth / 2) : (-totalWidth / 2);
@@ -1349,6 +1381,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   ctx.textAlign = 'center';
 
                   words.forEach((word, wIdx) => {
+                    const globalIdx = startWordIdx + wIdx;
                     const wordWidth = ctx.measureText(word).width;
                     const spaceWidth = ctx.measureText(' ').width;
 
@@ -1366,10 +1399,10 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                     ctx.lineJoin = 'round';
                     ctx.strokeStyle = '#000000';
 
-                    if (wIdx === activeWordIndex) {
-                      ctx.fillStyle = el.color || '#FFFF00'; 
+                    if (globalIdx === globalActiveWordIdx) {
+                      ctx.fillStyle = (el.color && el.color.toLowerCase() !== '#ffffff') ? el.color : '#FFFF00'; 
                       
-                      const wordProgress = (progress * totalWords) - wIdx;
+                      const wordProgress = (progress * globalTotalWords) - globalIdx;
                       let scale = 1.0;
                       if (wordProgress >= 0 && wordProgress <= 1) {
                          scale = 1.0 + Math.sin(wordProgress * Math.PI) * 0.3; 
@@ -1458,13 +1491,13 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   const words = line.split(' ').filter(w => w.trim() !== '');
                   const totalWords = words.length;
                   
-                  const allWords = (el.type === 'subtitle' && lines.length > 1 ? lines[0] : textToRender).split(/\s+/).filter(w => w.trim() !== '');
-                  const globalTotalWords = allWords.length;
+                  const allWords = lyricLines.join(' ').split(/\s+/).filter(w => w.trim() !== '');
+                  const globalTotalWords = allWords.length || 1;
                   const globalActiveWordIdx = Math.min(globalTotalWords - 1, Math.floor(progress * globalTotalWords));
                   
                   let startWordIdx = 0;
-                  for(let k=0; k<i; k++) {
-                      startWordIdx += lines[k].split(' ').filter(w => w.trim() !== '').length;
+                  for (let k = 0; k < i; k++) {
+                    startWordIdx += lines[k].split(' ').filter(w => w.trim() !== '').length;
                   }
                   
                   const spaceWidth = ctx.measureText(' ').width;
@@ -1487,7 +1520,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                       
                       if (isActive) {
                           ctx.scale(1.15, 1.15);
-                          ctx.fillStyle = el.color || '#FFFFFF'; // Sorotan warna kustom (atau putih)
+                          ctx.fillStyle = (el.color && el.color.toLowerCase() !== '#ffffff') ? el.color : '#FFD700'; // Sorotan warna kuning karaoke atau kustom
                           ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
                           ctx.shadowBlur = 8;
                           ctx.shadowOffsetX = 0;
@@ -1506,46 +1539,87 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                       currentX -= (wWidth + spaceWidth);
                   });
                 } else if (el.templateStyle === 'tiktok_karaoke') {
-                  // Word by word highlighting
+                  // Word by word karaoke highlighting with multi-line support
                   const words = line.split(' ');
                   const totalWords = words.length;
-                  // For multi-line we simplify by distributing progress across all lines, 
-                  // but here we just do it per line for simplicity or assume single line subtitle.
-                  const activeWordIndex = Math.min(totalWords - 1, Math.floor(progress * totalWords));
+                  const allWords = lyricLines.join(' ').split(/\s+/).filter(w => w.trim() !== '');
+                  const globalTotalWords = allWords.length || 1;
+                  const globalActiveWordIdx = Math.min(globalTotalWords - 1, Math.floor(progress * globalTotalWords));
                   
-                  let currentX = 0;
-                  // measure total width to center
-                  const totalWidth = ctx.measureText(line).width;
-                  let startX = -totalWidth / 2;
+                  let startWordIdx = 0;
+                  for (let k = 0; k < i; k++) {
+                    startWordIdx += lines[k].split(' ').filter(w => w.trim() !== '').length;
+                  }
                   
-                  ctx.textAlign = 'left';
-                  words.forEach((word, wIdx) => {
-                    const wordWidth = ctx.measureText(word).width;
-                    const spaceWidth = ctx.measureText(' ').width;
+                  const isLineArabic = /[\u0600-\u06FF\u0750-\u077F]/.test(line);
+                  const spaceWidth = ctx.measureText(' ').width;
+                  const wordWidths = words.map(w => ctx.measureText(w).width);
+                  const totalLineWidth = wordWidths.reduce((a, b) => a + b, 0) + Math.max(0, totalWords - 1) * spaceWidth;
+                  const highlightColor = (el.color && el.color.toLowerCase() !== '#ffffff') ? el.color : '#FFD700';
+                  
+                  if (isLineArabic) {
+                    // RTL layout for Arabic
+                    let currentX = totalLineWidth / 2;
+                    ctx.textAlign = 'center';
                     
-                    ctx.shadowColor = '#000000';
-                    ctx.shadowBlur = 0;
-                    ctx.shadowOffsetX = 2;
-                    ctx.shadowOffsetY = 2;
-                    
-                    if (wIdx === activeWordIndex) {
-                      ctx.fillStyle = el.color || '#00FF00'; // Highlight color
-                      // pop the word
+                    words.forEach((word, wIdx) => {
+                      const globalIdx = startWordIdx + wIdx;
+                      const wWidth = wordWidths[wIdx];
+                      const wordCenterX = currentX - (wWidth / 2);
+                      
                       ctx.save();
-                      ctx.translate(startX + wordWidth/2, lineY);
-                      ctx.scale(1.1, 1.1);
-                      ctx.fillText(word, -wordWidth/2, 0);
+                      ctx.translate(wordCenterX, lineY);
+                      
+                      ctx.shadowColor = '#000000';
+                      ctx.shadowBlur = 0;
+                      ctx.shadowOffsetX = 2;
+                      ctx.shadowOffsetY = 2;
+                      
+                      if (globalIdx === globalActiveWordIdx) {
+                        ctx.fillStyle = highlightColor;
+                        ctx.scale(1.15, 1.15);
+                        ctx.fillText(word, 0, 0);
+                      } else if (globalIdx < globalActiveWordIdx) {
+                        ctx.fillStyle = highlightColor;
+                        ctx.fillText(word, 0, 0);
+                      } else {
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillText(word, 0, 0);
+                      }
                       ctx.restore();
-                    } else if (wIdx < activeWordIndex) {
-                      ctx.fillStyle = el.color || '#00FF00'; // Already sung
-                      ctx.fillText(word, startX, lineY);
-                    } else {
-                      ctx.fillStyle = '#FFFFFF'; // Upcoming
-                      ctx.fillText(word, startX, lineY);
-                    }
-                    startX += wordWidth + spaceWidth;
-                  });
-                  ctx.textAlign = 'center'; // restore
+                      currentX -= (wWidth + spaceWidth);
+                    });
+                  } else {
+                    // LTR layout
+                    let startX = -totalLineWidth / 2;
+                    ctx.textAlign = 'left';
+                    words.forEach((word, wIdx) => {
+                      const globalIdx = startWordIdx + wIdx;
+                      const wordWidth = wordWidths[wIdx];
+                      
+                      ctx.shadowColor = '#000000';
+                      ctx.shadowBlur = 0;
+                      ctx.shadowOffsetX = 2;
+                      ctx.shadowOffsetY = 2;
+                      
+                      if (globalIdx === globalActiveWordIdx) {
+                        ctx.fillStyle = highlightColor;
+                        ctx.save();
+                        ctx.translate(startX + wordWidth / 2, lineY);
+                        ctx.scale(1.1, 1.1);
+                        ctx.fillText(word, -wordWidth / 2, 0);
+                        ctx.restore();
+                      } else if (globalIdx < globalActiveWordIdx) {
+                        ctx.fillStyle = highlightColor;
+                        ctx.fillText(word, startX, lineY);
+                      } else {
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillText(word, startX, lineY);
+                      }
+                      startX += wordWidth + spaceWidth;
+                    });
+                    ctx.textAlign = 'center';
+                  }
                 } else if (el.type === 'sticker_text') {
                   if (el.useGradient && el.color2) {
                      // Create vertical gradient matching the text bounds
@@ -1559,7 +1633,7 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   ctx.fillText(line, 0, lineY);
                 } else {
                   // Default
-                  if (el.type === 'subtitle' && lines.length > 1 && i > 0) {
+                  if (isTranslationLine(i)) {
                     const transScale = (el as any).translationScale || 0.85;
                     ctx.save();
                     ctx.font = `${Math.round(el.fontSize * transScale)}px ${el.fontFamily}`;
