@@ -188,6 +188,11 @@ export interface TextElement extends BaseElement {
   textCase?: "none" | "uppercase" | "lowercase" | "capitalize";
   backgroundColor?: string;
   backgroundOpacity?: number;
+  translationColor?: string;
+  translationScale?: number;
+  translationFontFamily?: string;
+  translationFontStyle?: "normal" | "italic";
+  translationFontWeight?: "normal" | "bold";
 }
 export interface BannerElement extends BaseElement {
   type: "banner";
@@ -340,6 +345,9 @@ export interface SubtitleElement extends BaseElement {
   bilingualMode?: "bilingual" | "translated_only" | "original_only";
   translationColor?: string;
   translationScale?: number;
+  translationFontFamily?: string;
+  translationFontStyle?: "normal" | "italic";
+  translationFontWeight?: "normal" | "bold";
 }
 export interface DigitalMatrixRainElement extends BaseElement {
   type: "digital_matrix_rain";

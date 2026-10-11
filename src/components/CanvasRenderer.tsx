@@ -854,9 +854,16 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                 if (isTranslationLine(i)) {
                   const transScale = (el as any).translationScale || 0.85;
                   const transColor = (el as any).translationColor || '#E2E8F0';
+                  const transFont = (el as any).translationFontFamily?.trim() || el.fontFamily;
+                  const transStyle = (el as any).translationFontStyle === 'italic' ? 'italic ' : '';
+                  const transWeight = (el as any).translationFontWeight === 'bold' ? 'bold ' : '';
                   ctx.save();
-                  ctx.font = `${Math.round(el.fontSize * transScale)}px ${el.fontFamily}`;
+                  ctx.font = `${transStyle}${transWeight}${Math.round(el.fontSize * transScale)}px ${transFont}`;
                   ctx.textAlign = 'center';
+
+                  // Support RTL for Arabic translation text
+                  const isArabicLine = /[\u0600-\u06FF]/.test(line);
+                  ctx.direction = isArabicLine ? 'rtl' : 'ltr';
                   
                   // Stroke halus berwarna gelap agar teks terjemahan kontras & sangat jelas dibaca
                   const strokeW = Math.max(2, Math.round(el.fontSize * 0.04));
@@ -1635,8 +1642,11 @@ export const CanvasRenderer = forwardRef<CanvasRendererRef, CanvasRendererProps>
                   // Default
                   if (isTranslationLine(i)) {
                     const transScale = (el as any).translationScale || 0.85;
+                    const transFont = (el as any).translationFontFamily?.trim() || el.fontFamily;
+                    const transStyle = (el as any).translationFontStyle === 'italic' ? 'italic ' : '';
+                    const transWeight = (el as any).translationFontWeight === 'bold' ? 'bold ' : '';
                     ctx.save();
-                    ctx.font = `${Math.round(el.fontSize * transScale)}px ${el.fontFamily}`;
+                    ctx.font = `${transStyle}${transWeight}${Math.round(el.fontSize * transScale)}px ${transFont}`;
                     ctx.fillStyle = (el as any).translationColor || '#E2E8F0';
                     ctx.fillText(line, 0, lineY + (el.fontSize * 0.1));
                     ctx.restore();

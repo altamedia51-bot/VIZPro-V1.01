@@ -184,6 +184,9 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
         bilingualMode: 'bilingual',
         translationColor: '#E2E8F0',
         translationScale: 0.85,
+        translationFontFamily: '',
+        translationFontStyle: 'normal',
+        translationFontWeight: 'normal',
       };
       newElements.push(newSub);
     }
@@ -252,6 +255,9 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
           bilingualMode: 'bilingual',
           translationColor: '#E2E8F0',
           translationScale: 0.85,
+          translationFontFamily: '',
+          translationFontStyle: 'normal',
+          translationFontWeight: 'normal',
         } as any);
       }
       
@@ -1578,6 +1584,99 @@ export const Editor: React.FC<EditorProps> = ({ project: initialProject, onExit 
             <option value="original_only">Lirik Saja (Multi-Baris Enter - Semua Baris Karaoke)</option>
             <option value="translated_only">Hanya Terjemahan</option>
           </select>
+        </div>
+
+        {/* Font & Style Khusus Terjemahan */}
+        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-[9px] text-gray-400">Font Terjemahan</span>
+              {(el as any).translationFontFamily && (
+                <button
+                  type="button"
+                  onClick={() => updateElement(el.id, { translationFontFamily: '' } as any)}
+                  className="text-[8.5px] text-blue-400 hover:text-blue-300 transition-colors"
+                  title="Kembali ikuti font lirik utama"
+                >
+                  Reset (Sama)
+                </button>
+              )}
+            </div>
+            <select
+              value={(el as any).translationFontFamily || ''}
+              onChange={e => updateElement(el.id, { translationFontFamily: e.target.value } as any)}
+              className="w-full bg-black/40 border border-white/10 rounded-lg p-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+            >
+              <option value="">(Ikuti Font Utama: {el.fontFamily || 'Inter'})</option>
+              <optgroup label="Estetik / Tulisan Tangan">
+                <option value="Caveat">Caveat (Handwriting)</option>
+                <option value="Dancing Script">Dancing Script</option>
+                <option value="Kalam">Kalam (Handwriting)</option>
+                <option value="Pacifico">Pacifico</option>
+                <option value="Architects Daughter">Architects Daughter</option>
+                <option value="Shadows Into Light">Shadows Into Light</option>
+              </optgroup>
+              <optgroup label="Latin Modern & Bersih">
+                <option value="Montserrat">Montserrat</option>
+                <option value="Inter">Inter</option>
+                <option value="Poppins">Poppins</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Open Sans">Open Sans</option>
+                <option value="Lato">Lato</option>
+                <option value="Nunito">Nunito</option>
+                <option value="Quicksand">Quicksand</option>
+                <option value="Raleway">Raleway</option>
+                <option value="Ubuntu">Ubuntu</option>
+                <option value="Merriweather">Merriweather (Serif)</option>
+                <option value="Playfair Display">Playfair Display (Serif)</option>
+                <option value="Oswald">Oswald (Condensed)</option>
+                <option value="Courier New">Courier New (Monospace)</option>
+              </optgroup>
+              <optgroup label="Font Arab / Arabic">
+                <option value="Amiri">Amiri</option>
+                <option value="Cairo">Cairo</option>
+                <option value="Tajawal">Tajawal</option>
+                <option value="Almarai">Almarai</option>
+                <option value="Noto Naskh Arabic">Noto Naskh Arabic</option>
+                <option value="Scheherazade New">Scheherazade New</option>
+                <option value="Reem Kufi">Reem Kufi</option>
+                <option value="El Messiri">El Messiri</option>
+              </optgroup>
+            </select>
+          </div>
+          <div>
+            <span className="text-[9px] text-gray-400 block mb-1">Gaya Huruf Terjemahan</span>
+            <div className="flex gap-1.5 h-[34px]">
+              <button
+                type="button"
+                onClick={() => updateElement(el.id, { 
+                  translationFontStyle: (el as any).translationFontStyle === 'italic' ? 'normal' : 'italic' 
+                } as any)}
+                className={`flex-1 flex items-center justify-center rounded-lg border text-xs font-serif italic transition-all ${
+                  (el as any).translationFontStyle === 'italic'
+                    ? 'bg-blue-600/30 border-blue-500 text-blue-300 font-bold shadow-sm'
+                    : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'
+                }`}
+                title="Teks Miring (Italic)"
+              >
+                Italic
+              </button>
+              <button
+                type="button"
+                onClick={() => updateElement(el.id, { 
+                  translationFontWeight: (el as any).translationFontWeight === 'bold' ? 'normal' : 'bold' 
+                } as any)}
+                className={`flex-1 flex items-center justify-center rounded-lg border text-xs font-bold transition-all ${
+                  (el as any).translationFontWeight === 'bold'
+                    ? 'bg-blue-600/30 border-blue-500 text-blue-300 shadow-sm'
+                    : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'
+                }`}
+                title="Teks Tebal (Bold)"
+              >
+                Bold
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
